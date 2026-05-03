@@ -311,7 +311,7 @@ class MultiUavEnv:
 
     def get_observation_of_a_uav(self, uav_id):
 
-        normal_ = max([self.map.map_max_x, self.map.map_max_x, self.max_available_height])
+        normal_ = np.array([self.map.map_max_x, self.map.map_max_y, self.max_available_height])
         # 友军的位置和速度、受攻击状态
         # TODO://待检查，友军和武器有关，观测半径可以后续再加
         all_team_observations = []

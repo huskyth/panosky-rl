@@ -327,4 +327,5 @@ def get_config():
 
     parser.add_argument('--scenario_name', type=str,
                         default='single_uav', help="Which scenario to run on")
+    parser.add_argument("--num_agents", type=int, default=1)
     return parser

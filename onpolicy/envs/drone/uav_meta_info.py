@@ -32,3 +32,11 @@ class TrainUAV:
             "status": self.status.value,
             'is_attacked_state': str(self.is_attacked_state)
         }
+
+    def __str__(self):
+        return str({
+            "position": self.position,
+            "velocity": self.velocity,
+            "status": self.status.value,
+            'is_attacked_state': str(self.is_attacked_state)
+        })
