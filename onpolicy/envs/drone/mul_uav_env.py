@@ -18,8 +18,8 @@ from onpolicy.envs.drone.uav_meta_info import TrainUAV
 
 from onpolicy.envs.drone.weapons.interfaces.environment_interface import EnvironmentInterface
 
-from AStar.flyer import fly_from_9_selections
-from AStar.config import vertacal_selection, horizontal_selection
+# from AStar.flyer import fly_from_9_selections
+# from AStar.config import vertacal_selection, horizontal_selection
 
 warnings.filterwarnings('ignore')
 logger = AppLogger().get_logger()

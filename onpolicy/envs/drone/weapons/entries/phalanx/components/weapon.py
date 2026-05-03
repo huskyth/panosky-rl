@@ -1,12 +1,10 @@
-from common.logger import *
-from entries.abstract_entry import *
-from common.math_tool import *
-from common.random_event import *
+from onpolicy.envs.drone.weapons.entries.abstract_entry import *
+from onpolicy.utils.random_event import *
 
-from entries.config.global_config import *
-from entries.uav.uav_enum import *
+from onpolicy.envs.drone.weapons.entries.config.global_config import *
+from onpolicy.envs.drone.weapons.entries.uav.uav_enum import *
 import os
-from common.format_logger import AppLogger
+from onpolicy.utils.format_logger import AppLogger
 
 logger = AppLogger().get_logger()
 
@@ -50,9 +48,7 @@ class Weapon(AbstractEntry):
         fire_number = int(min(fire_number, self.current_bullet_num))
         self._fire_some_bullet(fire_number, target)
         self.current_bullet_num -= fire_number
-        log(LogType.INFO,
-            str(os.getpid()) + "发射了" + str(fire_number) + "枚子弹，还剩下" + str(self.current_bullet_num) + "枚子弹",
-            is_in_file=False)
+        logger.info(str(os.getpid()) + "发射了" + str(fire_number) + "枚子弹，还剩下" + str(self.current_bullet_num) + "枚子弹")
 
     def step_time_instruction(self):
         self.time_instruction += UNIT_TIME
@@ -134,14 +130,14 @@ class Bullet(AbstractEntry):
         if self.all_time_to_fly <= UNIT_TIME:
             # 时间到了，进行毁伤计算
             is_hit_and_kill = self.is_hit_kill_by_mc()
-            log(LogType.INFO,
+            logger.info(
                 "id为：" + self.get_id() + "的子弹" + "它的无人机为：" + self.target.get_id() + ", 参数为" + str(
                     self.hit_kill_probability) + "，蒙特卡洛是否被 命中和毁伤 ：" + str(is_hit_and_kill))
             # 命中
             if is_hit_and_kill:
                 # 被毁伤，移除自己
                 self.target.set_attacked_state(AttackState.DESTROYED)
-                log(LogType.INFO,
+                logger.info(
                     "id为" + fun(self.target) + "的无人机被摧毁,当前随机数n为" + str(GameConfig.RANDOM_N),
                     is_in_file=False)
                 self.target.remove_self_from_list(uav_list)
@@ -162,7 +158,7 @@ class Bullet(AbstractEntry):
 
 
 if __name__ == '__main__':
-    from factory.uav_factory import UAVFactory
+    from onpolicy.envs.drone.weapons.factory.uav_factory import UAVFactory
 
     hit_probability = 0.1
     kill_probability = 0.5

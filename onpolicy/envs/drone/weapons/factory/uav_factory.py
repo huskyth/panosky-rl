@@ -1,5 +1,5 @@
-from entries.uav.uav import UAV
-from factory.config_factory import ConfigFactory, ConfigEnum
+from onpolicy.envs.drone.weapons.entries.uav.uav import UAV
+from onpolicy.envs.drone.weapons.factory.config_factory import ConfigFactory, ConfigEnum
 
 
 class UAVFactory:
