@@ -17,6 +17,7 @@ from onpolicy.utils.util import compute_distance
 from onpolicy.envs.drone.uav_meta_info import TrainUAV
 from pathlib import Path
 from onpolicy.envs.drone.weapons.interfaces.environment_interface import EnvironmentInterface
+from onpolicy.utils.math_tool import fly_from_9_selections, angle_2_radian
 
 warnings.filterwarnings('ignore')
 logger = AppLogger().get_logger()
@@ -36,6 +37,18 @@ if not json_path.exists():
 
 # 武器环境已知的环境
 class MultiUavEnv:
+    # 这边先垂直后水平，有问题再说
+    ACTION_SET = [
+        (angle_2_radian(10), angle_2_radian(-10)),
+        (angle_2_radian(10), angle_2_radian(0)),
+        (angle_2_radian(10), angle_2_radian(10)),
+        (angle_2_radian(0), angle_2_radian(-10)),
+        (angle_2_radian(0), angle_2_radian(0)),
+        (angle_2_radian(0), angle_2_radian(10)),
+        (angle_2_radian(-10), angle_2_radian(-10)),
+        (angle_2_radian(-10), angle_2_radian(0)),
+        (angle_2_radian(-10), angle_2_radian(10)),
+    ]
 
     def dump(self, reason):
         if self.is_debug and len(self.episode_data):
@@ -58,6 +71,7 @@ class MultiUavEnv:
                 gc.collect()
 
     def init_from_config(self, cf):
+        self.map_output_dimension = cf.getint("env", "map_output_dimension")
         self.task_success_radius = cf.getfloat("env", "task_success_radius")  # 任务成功半径 m
         self.uav_obs_radius = cf.getfloat("env", "uav_obs_radius")  # 局部观测半径 m
         self.uav_actual_velocity = cf.getfloat("env", "uav_velocity")  # 飞行速度 m/s
@@ -138,8 +152,6 @@ class MultiUavEnv:
         # 初始化目标和武器
         self.target = [0, 0, 0]
         self.weapon = [0, 0, 0]
-
-        self.map_output_dimension = args.map_output_dimension
 
         self.init_from_config(cf)
         self.init_space()
@@ -355,7 +367,7 @@ class MultiUavEnv:
             if self.raw_uavs[idx].status != UAVState.ALIVE:
                 continue
             actual_action = actions[idx][0]
-            radian_action = ACTION_SET[actual_action]
+            radian_action = self.ACTION_SET[actual_action]
 
             # 计算执行动作之后的速度和位置
             temp = self.raw_uavs[idx]
@@ -363,8 +375,7 @@ class MultiUavEnv:
             position = temp.position
             right = self.right_vector[idx]
             next_position, after_rotate_velocity_direction_in_parent, after_rotate_horizontal_right_vector_in_parent \
-                = fly_from_9_selections(
-                *actual_action, velocity, right, position, self.game_velocity)
+                = fly_from_9_selections(*radian_action, velocity, right, position, self.game_velocity)
             actual_velocity = (np.array(after_rotate_velocity_direction_in_parent) * self.game_velocity).tolist()
 
             self.right_vector[idx] = after_rotate_horizontal_right_vector_in_parent

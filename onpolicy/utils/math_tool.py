@@ -221,6 +221,49 @@ def a_sin_angle(v):
     return radian_2_angle(asin(v))
 
 
+def fly_from_9_selections(vertical_radian, horizontal_radian, velocity_direction, horizontal_right_vector,
+                          current_position, velocity_distance):
+    '''
+    目前先水平后垂直
+    角度传为弧度
+    '''
+
+    z_axis_in_parent = normalize(cross_product(velocity_direction, horizontal_right_vector))
+    y_axis_in_parent = normalize(velocity_direction)
+    x_axis_in_parent = normalize(cross_product(y_axis_in_parent, z_axis_in_parent))
+
+    matrix_parent2child = [x_axis_in_parent, y_axis_in_parent, z_axis_in_parent]
+    matrix_child2parent = transpose(matrix_parent2child)
+
+    velocity_direction_in_child = matrix_mul_vector(matrix_parent2child, velocity_direction)
+    horizontal_right_vector_in_child = matrix_mul_vector(matrix_parent2child, horizontal_right_vector)
+
+    after_rotate_velocity_direction_in_child = matrix_mul_vector(get_rotate_left_matrix_around_z(horizontal_radian),
+                                                                 velocity_direction_in_child)
+    after_rotate_velocity_direction_in_child = matrix_mul_vector(get_rotate_left_matrix_around_x(vertical_radian),
+                                                                 after_rotate_velocity_direction_in_child)
+
+    after_rotate_horizontal_right_vector_in_child = matrix_mul_vector(
+        get_rotate_left_matrix_around_z(horizontal_radian),
+        horizontal_right_vector_in_child)
+    after_rotate_horizontal_right_vector_in_child = matrix_mul_vector(get_rotate_left_matrix_around_x(vertical_radian),
+                                                                      after_rotate_horizontal_right_vector_in_child)
+
+    after_rotate_velocity_direction_in_parent = matrix_mul_vector(matrix_child2parent,
+                                                                  after_rotate_velocity_direction_in_child)
+    after_rotate_horizontal_right_vector_in_parent = matrix_mul_vector(matrix_child2parent,
+                                                                       after_rotate_horizontal_right_vector_in_child)
+
+    fly_distance_in_parent = scalar_mul_vector(velocity_distance,
+                                               normalize(after_rotate_velocity_direction_in_parent))
+
+    current_position = add_of_2_vector(fly_distance_in_parent, current_position)
+    after_rotate_velocity_direction_in_parent = normalize(after_rotate_velocity_direction_in_parent)
+    after_rotate_horizontal_right_vector_in_parent = normalize(after_rotate_horizontal_right_vector_in_parent)
+
+    return current_position, after_rotate_velocity_direction_in_parent, after_rotate_horizontal_right_vector_in_parent
+
+
 if __name__ == '__main__':
     while True:
         try:
