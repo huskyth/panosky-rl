@@ -17,7 +17,7 @@ from onpolicy.utils.util import compute_distance
 from onpolicy.envs.drone.uav_meta_info import TrainUAV
 from pathlib import Path
 from onpolicy.envs.drone.weapons.interfaces.environment_interface import EnvironmentInterface
-from onpolicy.utils.math_tool import fly_from_9_selections, angle_2_radian
+from onpolicy.utils.math_tool import fly_from_9_selections, angle_2_radian, length_of_vector
 
 warnings.filterwarnings('ignore')
 logger = AppLogger().get_logger()
@@ -74,7 +74,7 @@ class MultiUavEnv:
         self.map_output_dimension = cf.getint("env", "map_output_dimension")
         self.task_success_radius = cf.getfloat("env", "task_success_radius")  # 任务成功半径 m
         self.uav_obs_radius = cf.getfloat("env", "uav_obs_radius")  # 局部观测半径 m
-        self.uav_actual_velocity = cf.getfloat("env", "uav_velocity")  # 飞行速度 m/s
+        self.uav_velocity_value = cf.getfloat("env", "uav_velocity_value")  # 飞行速度 m/s
         self.uav_length = cf.getfloat("env", "uav_length")  # 无人机长度
         self.coll_safe_dis = cf.getfloat("env", "coll_safe_dis")  # 碰撞安全距离
         self.dis_target_weapon = cf.getfloat("env", "dis_target_weapon")  # 目标和武器的距离
@@ -105,8 +105,6 @@ class MultiUavEnv:
         map_resolution = cf.getfloat("map", "map_resolution")  # 地图分辨率
         self.map = Map(map_data_file, map_resolution, self.uav_length)
 
-        self.game_velocity = self.uav_step_time * self.uav_actual_velocity
-
     def init_space(self):
         # configure spaces
         self.action_space = []
@@ -114,7 +112,7 @@ class MultiUavEnv:
         self.share_observation_space = []
         obs_dim = None
         for agent_id in range(self.n_total_uavs):
-            self.action_space.append(spaces.Box(low=-1, high=1, shape=(2,), dtype=np.float32))
+            self.action_space.append(spaces.Discrete(9))
             obs_dim = self.get_observation_size_of_a_uav()
             self.observation_space.append(
                 spaces.Box(low=-np.inf, high=+np.inf, shape=(self.map_output_dimension + obs_dim,), dtype=np.float32))
@@ -142,7 +140,6 @@ class MultiUavEnv:
         self._episode_steps = 0
         self.max_episode_steps = episode_limit  # 任务的最大回合数
         # 从游戏获取参数并保存
-        self.uav_step_time = EnvironmentInterface.get_game_unit_time() * 5  # 每次动作的飞行时间 s
         self.radar_detect_radius = EnvironmentInterface.get_rader_detect_radius()  # 雷达检测半径 m
         self.weapon_fire_radius = EnvironmentInterface.get_fire_distance()  # 武器开火半径 m
 
@@ -282,15 +279,14 @@ class MultiUavEnv:
         return self.get_state_of_all_uav()
 
     def _init_toward_velocity(self, uav, target):
-        # TODO://待检查
         init_vel = [0, 0, 0]
         three_dim_dis = compute_distance(uav, target)
-        init_vel[2] = (target[2] - uav[2]) * self.game_velocity / three_dim_dis
+        init_vel[2] = (target[2] - uav[2]) * self.uav_velocity_value / three_dim_dis
         sin_beta = (target[2] - uav[2]) / three_dim_dis
         cos_beta = (1 - sin_beta ** 2) ** 0.5
         two_dim_dis = ((target[0] - uav[0]) ** 2 + (target[1] - uav[1]) ** 2) ** 0.5
-        init_vel[0] = (target[0] - uav[0]) * self.game_velocity * cos_beta / two_dim_dis
-        init_vel[1] = (target[1] - uav[1]) * self.game_velocity * cos_beta / two_dim_dis
+        init_vel[0] = (target[0] - uav[0]) * self.uav_velocity_value * cos_beta / two_dim_dis
+        init_vel[1] = (target[1] - uav[1]) * self.uav_velocity_value * cos_beta / two_dim_dis
         return init_vel
 
     # 判断随机生成的UAV位置是否可用
@@ -321,7 +317,7 @@ class MultiUavEnv:
         for i in range(self.n_total_uavs):
             uav = self.raw_uavs[i]
             position = uav.get_normalize_position(normal_)
-            velocity = uav.get_normalize_velocity(self.game_velocity)
+            velocity = uav.get_normalize_velocity()
             is_attacked = uav.is_attacked_state.value
             all_team_observations.extend(position + velocity)
             if self.is_use_weapon:
@@ -332,7 +328,7 @@ class MultiUavEnv:
         # 本机位置和速度
         temp_uav = self.raw_uavs[uav_id]
         position = temp_uav.get_normalize_position(normal_)
-        velocity = temp_uav.get_normalize_velocity(self.game_velocity)
+        velocity = temp_uav.get_normalize_velocity()
         is_attacked = temp_uav.is_attacked_state.value
         all_team_observations.extend(position + velocity)
 
@@ -375,9 +371,8 @@ class MultiUavEnv:
             position = temp.position
             right = self.right_vector[idx]
             next_position, after_rotate_velocity_direction_in_parent, after_rotate_horizontal_right_vector_in_parent \
-                = fly_from_9_selections(*radian_action, velocity, right, position, self.game_velocity)
-            actual_velocity = (np.array(after_rotate_velocity_direction_in_parent) * self.game_velocity).tolist()
-
+                = fly_from_9_selections(*radian_action, velocity, right, position)
+            actual_velocity = (np.array(after_rotate_velocity_direction_in_parent) * self.uav_velocity_value).tolist()
             self.right_vector[idx] = after_rotate_horizontal_right_vector_in_parent
             # 判断是否会发生碰撞
             self.judge_uav_collision_and_set(idx, *next_position)
@@ -523,7 +518,7 @@ class MultiUavEnv:
 
     def compute_init_velocity(self):
         # 保持设定速率不变
-        speed = self.game_velocity
+        speed = self.uav_velocity_value
         # 生成三维随机方向单位向量
         # 球坐标系随机方位角、俯仰角
         yaw = random.uniform(0, 2 * math.pi)  # 水平0~360度

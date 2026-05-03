@@ -221,21 +221,21 @@ def a_sin_angle(v):
     return radian_2_angle(asin(v))
 
 
-def fly_from_9_selections(vertical_radian, horizontal_radian, velocity_direction, horizontal_right_vector,
-                          current_position, velocity_distance):
+def fly_from_9_selections(vertical_radian, horizontal_radian, velocity, horizontal_right_vector,
+                          current_position):
     '''
     目前先水平后垂直
     角度传为弧度
     '''
-
-    z_axis_in_parent = normalize(cross_product(velocity_direction, horizontal_right_vector))
-    y_axis_in_parent = normalize(velocity_direction)
+    velocity_distance = length_of_vector(velocity)
+    z_axis_in_parent = normalize(cross_product(velocity, horizontal_right_vector))
+    y_axis_in_parent = normalize(velocity)
     x_axis_in_parent = normalize(cross_product(y_axis_in_parent, z_axis_in_parent))
 
     matrix_parent2child = [x_axis_in_parent, y_axis_in_parent, z_axis_in_parent]
     matrix_child2parent = transpose(matrix_parent2child)
 
-    velocity_direction_in_child = matrix_mul_vector(matrix_parent2child, velocity_direction)
+    velocity_direction_in_child = matrix_mul_vector(matrix_parent2child, velocity)
     horizontal_right_vector_in_child = matrix_mul_vector(matrix_parent2child, horizontal_right_vector)
 
     after_rotate_velocity_direction_in_child = matrix_mul_vector(get_rotate_left_matrix_around_z(horizontal_radian),
@@ -265,10 +265,15 @@ def fly_from_9_selections(vertical_radian, horizontal_radian, velocity_direction
 
 
 if __name__ == '__main__':
-    while True:
-        try:
-            1 / 0
-        except:
-            print('except')
-            break
-    print('outer')
+    position = [0, 0, 0]
+    velocity = [0, 4, 3]
+    right = [
+        0, 1, 0]
+    current_position, after_rotate_velocity_direction_in_parent, after_rotate_horizontal_right_vector_in_parent = fly_from_9_selections(
+        0, 0, velocity, right, position)
+    print("距离为{},当前位置：{}，速度方向：{}，水平向右方向：{}".format(
+        distance_of_2_point(current_position, position),
+        current_position,
+        after_rotate_velocity_direction_in_parent,
+        after_rotate_horizontal_right_vector_in_parent))
+    print(f"{length_of_vector(after_rotate_velocity_direction_in_parent)}")

@@ -1,5 +1,7 @@
 import numpy as np
 
+from onpolicy.utils.math_tool import normalize
+
 
 class TrainUAV:
     def __init__(self, px, py, pz, vx, vy, vz, is_attacked_state, status):
@@ -11,8 +13,8 @@ class TrainUAV:
     def get_position_and_velocity(self):
         return self.position + self.velocity
 
-    def get_normalize_velocity(self, game_velocity):
-        return (np.array(self.velocity) / game_velocity).tolist()
+    def get_normalize_velocity(self):
+        return normalize(self.velocity)
 
     def get_normalize_position(self, normal_):
         return (np.array(self.position) / normal_).tolist()
