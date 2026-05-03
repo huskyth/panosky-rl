@@ -1,5 +1,5 @@
-from entries.config.phalanx_config import *
-from entries.config.uav_config import UAVConfig
+from onpolicy.envs.drone.weapons.entries.config.phalanx_config import *
+from onpolicy.envs.drone.weapons.entries.config.uav_config import UAVConfig
 from enum import Enum
 
 

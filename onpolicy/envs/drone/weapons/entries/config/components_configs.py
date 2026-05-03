@@ -1,4 +1,4 @@
-from common.math_tool import angle_2_radian, radian_2_angle
+from onpolicy.utils.math_tool import angle_2_radian, radian_2_angle
 
 
 class AbstractComponentConfig:

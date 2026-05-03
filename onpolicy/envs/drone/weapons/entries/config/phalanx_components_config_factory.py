@@ -1,8 +1,8 @@
-from common.format_logger import AppLogger
+from onpolicy.utils.format_logger import AppLogger
 
 logger = AppLogger().get_logger()
 
-from entries.config.components_configs import *
+from onpolicy.envs.drone.weapons.entries.config.components_configs import *
 
 from enum import Enum
 

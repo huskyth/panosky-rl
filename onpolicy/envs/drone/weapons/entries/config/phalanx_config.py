@@ -1,5 +1,6 @@
-from entries.config.phalanx_components_config_factory import PhalanxComponentsConfigFactory, PhalanxComponentConfigEnum
-from common.object_tool import *
+from onpolicy.envs.drone.weapons.entries.config.phalanx_components_config_factory import PhalanxComponentsConfigFactory, \
+    PhalanxComponentConfigEnum
+from onpolicy.utils.object_tool import *
 
 
 class PhalanxConfig:
