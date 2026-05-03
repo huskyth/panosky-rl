@@ -15,11 +15,8 @@ from onpolicy.envs.drone.weapons.entries.uav.uav_enum import UAVState, AttackSta
 from onpolicy.envs.drone.maps.map import Map
 from onpolicy.utils.util import compute_distance
 from onpolicy.envs.drone.uav_meta_info import TrainUAV
-
+from pathlib import Path
 from onpolicy.envs.drone.weapons.interfaces.environment_interface import EnvironmentInterface
-
-# from AStar.flyer import fly_from_9_selections
-# from AStar.config import vertacal_selection, horizontal_selection
 
 warnings.filterwarnings('ignore')
 logger = AppLogger().get_logger()
@@ -31,16 +28,6 @@ def cos_theta(target, position, v):
     logger.info(f"cos = {cos_}")
     return cos_
 
-
-ACTION_SET = []
-for v in vertacal_selection:
-    for h in horizontal_selection:
-        ACTION_SET.append((v, h))
-
-RESNET18 = models.resnet18(pretrained=True)
-path = os.path.join(os.path.dirname(__file__), 'resnet18.pth')
-RESNET18.load_state_dict(torch.load(path, weights_only=False))
-from pathlib import Path
 
 json_path = Path(__file__).parent / "jsons"
 if not json_path.exists():
@@ -124,12 +111,15 @@ class MultiUavEnv:
             for _ in range(self.n_total_uavs)]
 
     def __init__(self, args, mode="train", cf=None, episode_limit=500, is_debug=False):
+        RESNET18 = models.resnet18(pretrained=True)
+        path = os.path.join(os.path.dirname(__file__), 'resnet18.pth')
+        RESNET18.load_state_dict(torch.load(path, weights_only=False))
+        self.res18 = RESNET18
+
         # train为训练模式，test为测试模式
         self.mode = mode
         self.is_debug = is_debug
         self.is_use_weapon = False
-
-        self.right_vector = None
 
         # 初始化回合数
         self.n_episode = 0
@@ -175,7 +165,6 @@ class MultiUavEnv:
         self.raw_uavs = []
         self.episode_data = []  # 存储历史的数据
         self._episode_steps = 0
-        self.right_vector = [[1, 0, 0] for i in range(self.n_total_uavs)]
         self.reward = None
         self.is_terminal = [False for _ in range(self.n_total_uavs)]
 
@@ -341,7 +330,7 @@ class MultiUavEnv:
         map_obs = cv2.resize(map_obs, dsize=(224, 224))[None, None, :, :].repeat(3, axis=1)
         map_obs = torch.tensor(map_obs).float()
         map_obs = (map_obs - map_obs.min()) / (map_obs.max() - map_obs.min())
-        map_obs = RESNET18(map_obs).tolist()
+        map_obs = self.res18(map_obs).tolist()
         weapon = (np.array(self.weapon) / normal_).tolist()
         target = (np.array(self.target) / normal_).tolist()
 
@@ -350,26 +339,30 @@ class MultiUavEnv:
     def step(self, action):
         # 输入动作先转换为两个离散动作
         self.is_terminal = [False for _ in range(self.n_total_uavs)]
+        actions = []
+        # 对于每个智能体
+        for idx in range(self.n_total_uavs):
+            action_index = int(np.where(action[idx] == 1)[0])
+            actions.append([action_index])
+
         # 获取执行动作前的UAV集群观测
         last_state = copy.deepcopy(self.raw_uavs)
         # 计算每架UAV执行动作后的速度、位置、碰撞情况以及与武器之间是否存在山体遮挡
         for idx in range(self.n_total_uavs):
             if self.raw_uavs[idx].status != UAVState.ALIVE:
                 continue
-            actual_action = action[idx]
-            actual_action[0] *= 12
-            actual_action[1] *= 12
+            actual_action = actions[idx][0]
+            radian_action = ACTION_SET[actual_action]
+
             # 计算执行动作之后的速度和位置
             temp = self.raw_uavs[idx]
             velocity = temp.velocity
             position = temp.position
-            right = self.right_vector[idx]
             next_position, after_rotate_velocity_direction_in_parent, after_rotate_horizontal_right_vector_in_parent \
                 = fly_from_9_selections(
-                *actual_action.tolist(), velocity, right, position, self.game_velocity)
+                *actual_action, velocity, right, position, self.game_velocity)
             actual_velocity = (np.array(after_rotate_velocity_direction_in_parent) * self.game_velocity).tolist()
 
-            self.right_vector[idx] = after_rotate_horizontal_right_vector_in_parent
             # 判断是否会发生碰撞
             self.judge_uav_collision_and_set(idx, *next_position)
 
