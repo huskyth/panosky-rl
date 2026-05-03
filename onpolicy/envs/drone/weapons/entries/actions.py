@@ -1,10 +1,9 @@
-from factory.config_factory import ConfigFactory
-from factory.phalanx_factory import PhalanxFactory
-from factory.uav_factory import UAVFactory
-from entries.phalanx.components.track_rader.track_rader_state import *
-# from common.math_tool import distance_of_2_point
-from unity_tool.some_to_write import write_some
-from common.math_tool import distance_of_2_point, length_of_vector
+from onpolicy.envs.drone.weapons.factory.config_factory import ConfigFactory
+from onpolicy.envs.drone.weapons.factory.phalanx_factory import PhalanxFactory
+from onpolicy.envs.drone.weapons.factory.uav_factory import UAVFactory
+from onpolicy.envs.drone.weapons.entries.phalanx.components.track_rader.track_rader_state import *
+from onpolicy.envs.drone.weapons.entries.config.global_config import *
+from onpolicy.utils.math_tool import distance_of_2_point, length_of_vector
 
 
 class GameManager:
@@ -123,12 +122,12 @@ class UnityTestAction(AbstractAction):
 
     def write_info(self):
         if len(GameManager.uav_list) != 0:
-            write_some("UAV:" + ",".join([str(x) for x in GameManager.uav_list[0].get_position()]))
-        write_some("P_TOP:" + ",".join([str(x) for x in GameManager.track_rader.top_board_position_vector]))
+            logger.info("UAV:" + ",".join([str(x) for x in GameManager.uav_list[0].get_position()]))
+        logger.info("P_TOP:" + ",".join([str(x) for x in GameManager.track_rader.top_board_position_vector]))
 
     def execute(self):
         if not UnityTestAction.one_print_flag:
-            write_some("P:" + ",".join([str(x) for x in GameManager.phalanx.get_position()]))
+            logger.info("P:" + ",".join([str(x) for x in GameManager.phalanx.get_position()]))
             UnityTestAction.one_print_flag = True
         if GameConfig.record_unity_end_flag != 1:
             self.write_info()
@@ -140,19 +139,18 @@ class TimeStepAction(AbstractAction):
     @staticmethod
     def execute():
         content = TrackRaderState.get_current_string_state()
-        display_log("当前状态", [content])
-        log(LogType.INFO, "当前状态为：" + content)
-        log(LogType.INFO, "当前时间{},随机数n为{}".format(GameConfig.CURRENT_GAME_TIME, GameConfig.RANDOM_N))
+        logger.info("当前状态", [content])
+        logger.info("当前状态为：" + content)
+        logger.info("当前时间{},随机数n为{}".format(GameConfig.CURRENT_GAME_TIME, GameConfig.RANDOM_N))
         GameConfig.CURRENT_GAME_TIME = round(UNIT_TIME + GameConfig.CURRENT_GAME_TIME, 1)
         for i in range(len(GameManager.uav_list)):
             if not GameManager.uav_list[i]:
                 temp = None
             else:
                 temp = GameManager.uav_list[i].position
-            log(LogType.INFO, "当前无人机位置为{}".format(temp), is_in_file=False)
+            logger.info("当前无人机位置为{}".format(temp), is_in_file=False)
         if GameManager.track_rader.current_target is not None:
-            log(LogType.INFO,
-                "当前目标索引为{}".format(GameManager.get_uav_index()))
+            logger.info("当前目标索引为{}".format(GameManager.get_uav_index()))
 
 
 class SearchAction(AbstractAction):
@@ -163,10 +161,10 @@ class SearchAction(AbstractAction):
     def _search_log():
         print_uav_list = GameManager.search_rader.get_mark_3_time_uav_list(GameManager.uav_list)
         uav_list_str = [uav.print_self() for uav in print_uav_list]
-        display_log("搜索雷达发现的目标", uav_list_str)
+        logger.info("搜索雷达发现的目标", uav_list_str)
         content = "不存在" if len(uav_list_str) == 0 else " ".join(uav_list_str)
 
-        log(LogType.INFO, "搜索雷达发现的目标：" + content)
+        logger.info("搜索雷达发现的目标：" + content)
 
     @staticmethod
     def execute():
@@ -183,8 +181,8 @@ class ConfirmTargetAction(AbstractAction):
     def _target_log():
         current_target = GameManager.track_rader.try_get_current_target()
         content = "不存在" if current_target is None else current_target.print_self()
-        display_log("当前目标", [content])
-        log(LogType.INFO, "当前目标为：" + content)
+        logger.info("当前目标", [content])
+        logger.info("当前目标为：" + content)
 
     @staticmethod
     def execute():
@@ -264,7 +262,8 @@ class LoadBulletAction(AbstractAction):
 
     @staticmethod
     def confirm_track_target_and_adjust_board():
-        if GameManager.track_rader.confirm_track_target(GameManager.search_rader, GameManager.uav_list, GameManager.get_uav_index) is not None:
+        if GameManager.track_rader.confirm_track_target(GameManager.search_rader, GameManager.uav_list,
+                                                        GameManager.get_uav_index) is not None:
             if LoadBulletAction.end_state != TrackStateEnum.ADJUST_BOARD:
                 GameManager.track_rader.calculate_adjust_data()
                 LoadBulletAction.end_state = TrackStateEnum.ADJUST_BOARD
@@ -278,7 +277,7 @@ class LoadBulletAction(AbstractAction):
     @staticmethod
     def _adjust_board_in_load_bullet_action():
         if GameManager.track_rader.try_get_current_target() is None:
-            log(LogType.WARNING, "装弹的时候调弦，但是目标已经移除")
+            logger.info("装弹的时候调弦，但是目标已经移除")
             LoadBulletAction.confirm_track_target_and_adjust_board()
             return
         is_target_in_track_range = GameManager.track_rader.is_target_in_track_range(GameManager.get_uav_index)
@@ -301,7 +300,7 @@ class LoadBulletAction(AbstractAction):
         if TrackRaderState.is_load_bullet_state():
             LoadBulletAction._adjust_board_in_load_bullet_action()
             if GameManager.weapon.step_load_bullet():
-                log(LogType.INFO, "装弹完成，末状态为：" + STATE_TO_STRING[LoadBulletAction.end_state])
+                logger.info("装弹完成，末状态为：" + STATE_TO_STRING[LoadBulletAction.end_state])
                 # 装弹完成,万一没走？
                 TrackRaderState.set_definded_state(LoadBulletAction.end_state)
             else:
@@ -358,7 +357,7 @@ class FireAction(AbstractAction):
     def execute():
         if TrackRaderState.is_fire_state():
             is_target_in_fire_range = GameManager.track_rader.is_target_in_fire_range()
-            log(LogType.INFO,
+            logger.info(
                 "最小开火距离为：" + str(GameManager.track_rader.minimum_fire_distance) + "，开火最远距离为：" + str(
                     GameManager.track_rader.fire_distance) + "，密集阵与id为" + str(
                     GameManager.get_uav_index()) + "的无人机的距离：" + str(
@@ -366,7 +365,7 @@ class FireAction(AbstractAction):
                                         GameManager.track_rader.current_target.position)), is_in_file=False)
             can_use = GameManager.track_rader.is_target_can_use_because_no_mountain()
             if not is_target_in_fire_range or not can_use:
-                log(LogType.INFO, "因为超出开火距离或者有山而被设置为没有目标状态")
+                logger.info("因为超出开火距离或者有山而被设置为没有目标状态")
                 GameManager.track_rader.remove_target()
                 GameManager.weapon.reset_fire_instruction()
                 TrackRaderState.set_normal_state()

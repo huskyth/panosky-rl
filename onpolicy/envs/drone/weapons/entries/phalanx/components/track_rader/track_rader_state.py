@@ -1,12 +1,13 @@
-from common.logger import *
-from entries.phalanx.components.track_rader.track_rader_enum import *
-from entries.config.global_config import *
+from onpolicy.envs.drone.weapons.entries.phalanx.components.track_rader.track_rader_enum import *
+from onpolicy.utils.format_logger import AppLogger
+
+logger = AppLogger().get_logger()
 
 
 def print_wrapper(to_state):
     def wrapper(func):
         def print_state():
-            log(LogType.INFO, "状态转换过程：" + str(
+            logger.info("状态转换过程：" + str(
                 STATE_TO_STRING[TrackRaderState.current_state]) + "->" + str(
                 to_state))
             func()

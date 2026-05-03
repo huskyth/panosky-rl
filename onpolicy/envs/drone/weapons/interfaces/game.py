@@ -1,5 +1,4 @@
-from factory.action_factory import *
-from front_interface.ui_interface import *
+from onpolicy.envs.drone.weapons.factory.action_factory import *
 
 
 class Game:
