@@ -13,7 +13,7 @@ from onpolicy.config import get_config
 import configparser
 
 # 读取配置文件中的参数并保存
-config_path = temp / 'config/hz_demo.ini'
+config_path = temp / 'config/th_demo.ini'
 cf = configparser.ConfigParser()
 cf.read(str(config_path), encoding="utf-8")
 

@@ -124,7 +124,7 @@ class MultiUavEnv:
                        dtype=np.float32)
             for _ in range(self.n_total_uavs)]
 
-    def __init__(self, args, mode="train", cf=None, episode_limit=500, is_debug=False):
+    def __init__(self, mode="train", cf=None, episode_limit=500, is_debug=False):
         RESNET18 = models.resnet18(pretrained=True)
         path = os.path.join(os.path.dirname(__file__), 'resnet18.pth')
         RESNET18.load_state_dict(torch.load(path, weights_only=False))
