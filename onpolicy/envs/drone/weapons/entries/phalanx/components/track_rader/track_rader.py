@@ -1,6 +1,4 @@
-from common.logger import *
-from entries.phalanx.components.rader import *
-from AStar.config import *
+from onpolicy.envs.drone.weapons.entries.phalanx.components.rader import *
 
 
 class TrackRader(Rader):
@@ -10,7 +8,8 @@ class TrackRader(Rader):
         self.fire_distance = self.config.fire_distance
         self.minimum_fire_distance = self.config.minimum_fire_distance
         self.minimum_track_distance = self.config.minimum_track_distance
-        GameConfig.THREAT_LEVEL_THRESHOLD = velocity_constant / self.track_distance
+        # TODO://速度需要修改，这个5是速度常量
+        GameConfig.THREAT_LEVEL_THRESHOLD = 5 / self.track_distance
 
         # 舷基座的位置，相对于绝对坐标
         self.position = config.common_config['position']
@@ -114,7 +113,7 @@ class TrackRader(Rader):
         :return:
         '''
         if self.current_target is None:
-            log(LogType.ERROR, "移除目标时，当前目标不存在")
+            logger.info("移除目标时，当前目标不存在")
             assert False
             return
         self.current_target.reset_attacked_state()
@@ -209,7 +208,7 @@ class TrackRader(Rader):
         return threat_level_uav_list
 
     def _is_a_uav_in_track_range(self, a_uav, fun):
-        log(LogType.INFO,
+        logger.info(
             "最小跟踪距离为：" + str(self.minimum_track_distance) + "，跟踪最远距离为：" + str(
                 self.track_distance) + "，密集阵与id为" + fun(a_uav) + "的无人机的距离：" + str(
                 distance_of_2_point(self.position,
@@ -219,7 +218,7 @@ class TrackRader(Rader):
 
     def is_target_in_track_range(self, fun):
         assert self.current_target is not None, "current target is None"
-        log(LogType.INFO,
+        logger.info(
             "最小跟踪距离为：" + str(self.minimum_track_distance) + "，跟踪最远距离为：" + str(
                 self.track_distance) + "，密集阵与id为" + fun(self.current_target) + "的无人机的距离：" + str(
                 distance_of_2_point(self.position,
@@ -235,11 +234,10 @@ class TrackRader(Rader):
 
     def is_target_in_fire_range(self):
         assert self.current_target is not None, "current target is None"
-        log(LogType.INFO,
-            "最小开火距离为：" + str(self.minimum_fire_distance) + "，开火最远距离为：" + str(
-                self.fire_distance) + "，密集阵与id为" + self.current_target.get_id() + "无人机的距离：" + str(
-                distance_of_2_point(self.position,
-                                    self.current_target.position)))
+        logger.info("最小开火距离为：" + str(self.minimum_fire_distance) + "，开火最远距离为：" + str(
+            self.fire_distance) + "，密集阵与id为" + self.current_target.get_id() + "无人机的距离：" + str(
+            distance_of_2_point(self.position,
+                                self.current_target.position)))
         return is_a_point_in_a_sphere(self.fire_distance, self.position,
                                       self.current_target.position) and is_a_point_out_a_sphere(
             self.minimum_fire_distance, self.position, self.current_target.position)
@@ -253,9 +251,8 @@ class TrackRader(Rader):
         uav_position = single_uav.position
         distance = distance_of_2_point(uav_position, self.position)
         distance_variation = self._cal_projection_velocity(single_uav)
-        log(LogType.INFO,
-            "uav_position = {}, self.position = {},distance_variation = {}".format(uav_position, self.position,
-                                                                                   distance_variation))
+        logger.info("uav_position = {}, self.position = {},distance_variation = {}".format(uav_position, self.position,
+                                                                                           distance_variation))
         if distance == 0: return Inf
         return distance_variation / distance
 
@@ -265,18 +262,17 @@ class TrackRader(Rader):
         '''
         uav_velocity, uav_velocity_direction, uav_position = single_uav.velocity, single_uav.velocity_direction, single_uav.position
         track_2_uav_vector = normalize(subtraction_of_2_vector(self.position, uav_position))
-        log(LogType.INFO,
-            "uav_velocity = {}, uav_velocity_direction = {},track_2_uav_vector = {}".format(uav_velocity,
-                                                                                            uav_velocity_direction,
-                                                                                            track_2_uav_vector))
+        logger.info("uav_velocity = {}, uav_velocity_direction = {},track_2_uav_vector = {}".format(uav_velocity,
+                                                                                                    uav_velocity_direction,
+                                                                                                    track_2_uav_vector))
         return abs(
             dot_of_2_vector(track_2_uav_vector, scalar_mul_vector(uav_velocity, normalize(uav_velocity_direction))))
 
 
 if __name__ == '__main__':
-    from factory.config_factory import ConfigEnum, ConfigFactory
-    from entries.phalanx.phalanx import Phalanx
-    from factory.uav_factory import UAVFactory
+    from onpolicy.envs.drone.weapons.factory.config_factory import ConfigEnum, ConfigFactory
+    from onpolicy.envs.drone.weapons.entries.phalanx.phalanx import Phalanx
+    from onpolicy.envs.drone.weapons.factory.uav_factory import UAVFactory
 
     tr = Phalanx(ConfigFactory.create(ConfigEnum.phalanx))
     tr.track_rader.current_target = UAVFactory.create()
