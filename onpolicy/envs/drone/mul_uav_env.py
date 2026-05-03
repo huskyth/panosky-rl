@@ -314,28 +314,12 @@ class MultiUavEnv:
         normal_ = np.array([self.map.map_max_x, self.map.map_max_y, self.max_available_height])
         # 友军的位置和速度、受攻击状态
         # TODO://待检查，友军和武器有关，观测半径可以后续再加
-        all_team_observations = []
-        for i in range(self.n_total_uavs):
-            uav = self.raw_uavs[i]
-            position = uav.get_normalize_position(normal_)
-            velocity = uav.get_normalize_velocity()
-            is_attacked = uav.is_attacked_state.value
-            all_team_observations.extend(position + velocity)
-            if self.is_use_weapon:
-                all_team_observations.append(is_attacked)
-                # 1代表诱饵机
-                all_team_observations.append(1 - i)
 
         # 本机位置和速度
         temp_uav = self.raw_uavs[uav_id]
         position = temp_uav.get_normalize_position(normal_)
         velocity = temp_uav.get_normalize_velocity()
-        is_attacked = temp_uav.is_attacked_state.value
-        all_team_observations.extend(position + velocity)
-
-        if self.is_use_weapon:
-            all_team_observations.append(is_attacked)
-            all_team_observations.append(1 - uav_id)
+        right_vector = normalize(self.right_vector[uav_id])
 
         map_obs = self.map.generate_img(position[0], position[1])[0][0]
         import cv2
@@ -346,7 +330,7 @@ class MultiUavEnv:
         weapon = (np.array(self.weapon) / normal_).tolist()
         target = (np.array(self.target) / normal_).tolist()
 
-        return all_team_observations + weapon + target + map_obs[0]
+        return position + velocity + right_vector + weapon + target + map_obs[0]
 
     def step(self, action):
         # 输入动作先转换为两个离散动作
@@ -548,12 +532,13 @@ class MultiUavEnv:
         8: 自身-位置、速度、受攻击状态、是否是诱饵机
         3: 目标坐标
         3: 武器坐标
+        3: 考虑到右向量和飞行有关，所以要加进去
         (N * 8 + 8 + 3 + 3)
         """
         if self.is_use_weapon:
             return self.n_total_uavs * 8 + 8 + 6
         else:
-            return self.n_total_uavs * 6 + 6 + 6
+            return 3 + 3 + 3 + 3 + 3
 
     def close(self):
         pass
