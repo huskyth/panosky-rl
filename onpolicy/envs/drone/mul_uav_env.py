@@ -13,7 +13,7 @@ from onpolicy.utils.format_logger import AppLogger
 
 from AStar.flyer import fly_from_9_selections
 from onpolicy.envs.drone.weapons.entries.uav.uav_enum import UAVState, AttackState
-from rl_environment.map import Map
+from onpolicy.envs.drone.maps.map import Map
 from rl_environment.tools import compute_distance
 from rl_environment.uav_meta_info import TrainUAV
 
