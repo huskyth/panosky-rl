@@ -121,6 +121,8 @@ class MultiUavEnv:
         self.is_debug = is_debug
         self.is_use_weapon = False
 
+        self.right_vector = None
+
         # 初始化回合数
         self.n_episode = 0
         self._episode_steps = 0
@@ -165,6 +167,7 @@ class MultiUavEnv:
         self.raw_uavs = []
         self.episode_data = []  # 存储历史的数据
         self._episode_steps = 0
+        self.right_vector = [[1, 0, 0] for i in range(self.n_total_uavs)]
         self.reward = None
         self.is_terminal = [False for _ in range(self.n_total_uavs)]
 
@@ -358,11 +361,13 @@ class MultiUavEnv:
             temp = self.raw_uavs[idx]
             velocity = temp.velocity
             position = temp.position
+            right = self.right_vector[idx]
             next_position, after_rotate_velocity_direction_in_parent, after_rotate_horizontal_right_vector_in_parent \
                 = fly_from_9_selections(
                 *actual_action, velocity, right, position, self.game_velocity)
             actual_velocity = (np.array(after_rotate_velocity_direction_in_parent) * self.game_velocity).tolist()
 
+            self.right_vector[idx] = after_rotate_horizontal_right_vector_in_parent
             # 判断是否会发生碰撞
             self.judge_uav_collision_and_set(idx, *next_position)
 
