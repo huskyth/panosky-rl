@@ -19,7 +19,7 @@ cf.read(str(config_path), encoding="utf-8")
 
 parser = get_config()
 all_args = parse_args(sys.argv[1:], parser)
-env = MultiUavEnv(cf=cf, is_debug=True)
+env = MultiUavEnv(cf=cf, is_debug=True, episode_limit=100)
 import numpy as np
 
 env.reset()

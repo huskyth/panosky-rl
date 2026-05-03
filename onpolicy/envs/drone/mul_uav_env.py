@@ -17,7 +17,7 @@ from onpolicy.utils.util import compute_distance
 from onpolicy.envs.drone.uav_meta_info import TrainUAV
 from pathlib import Path
 from onpolicy.envs.drone.weapons.interfaces.environment_interface import EnvironmentInterface
-from onpolicy.utils.math_tool import fly_from_9_selections, angle_2_radian, length_of_vector
+from onpolicy.utils.math_tool import fly_from_9_selections, angle_2_radian, length_of_vector, normalize
 
 warnings.filterwarnings('ignore')
 logger = AppLogger().get_logger()
@@ -104,6 +104,8 @@ class MultiUavEnv:
         map_data_file = cf.get("map", "map_data_file")  # 地图文件路径
         map_resolution = cf.getfloat("map", "map_resolution")  # 地图分辨率
         self.map = Map(map_data_file, map_resolution, self.uav_length)
+
+        assert self.task_success_radius > self.uav_velocity_value
 
     def init_space(self):
         # configure spaces
@@ -259,7 +261,6 @@ class MultiUavEnv:
                 available = self.judge_random_position_available(uav_x, uav_y, uav_z)
             # 初始化速度（原有逻辑）
             init_vel = self._init_toward_velocity([uav_x, uav_y, uav_z], self.target)
-
             temp_uav = TrainUAV(uav_x, uav_y, uav_z, *init_vel, AttackState.SAFE, UAVState.ALIVE)
             self.raw_uavs.append(temp_uav)
 
@@ -398,7 +399,7 @@ class MultiUavEnv:
                     self.raw_uavs[u].status = UAVState.DESTROYED
         data_save = {"uva_state": [x.to_dict() for x in self.raw_uavs], "uva_actions": action.tolist(),
                      "_episode_steps": self._episode_steps}
-
+        logger.info(f"无人机和目标的距离为 {compute_distance(self.raw_uavs[0].position, self.target)}")
         self.episode_data.append(data_save)
         # 计算奖励值和终止符号
         self.set_reward(last_state)
