@@ -56,7 +56,7 @@ class Weapon(AbstractEntry):
 
     def step_time_instruction(self):
         self.time_instruction += UNIT_TIME
-        log(LogType.INFO, "指令准备时间自增，当前指令时间：" + str(self.time_instruction))
+        logger.info("指令准备时间自增，当前指令时间：" + str(self.time_instruction))
 
     def reset_time_instruction(self):
         self.time_instruction = 0
@@ -65,7 +65,7 @@ class Weapon(AbstractEntry):
         if self.is_fire_instruction_finish_bool: return True
         _is_fire_instruction_finish = self.time_instruction == FIRE_INSTRUCTION_TIME
         if _is_fire_instruction_finish:
-            log(LogType.INFO, "指令准备完成，当前指令时间为：" + str(self.time_instruction))
+            logger.info("指令准备完成，当前指令时间为：" + str(self.time_instruction))
             self.is_fire_instruction_finish_bool = True
         return _is_fire_instruction_finish
 
@@ -74,7 +74,7 @@ class Weapon(AbstractEntry):
         self.is_fire_instruction_finish_bool = False
 
     def is_bullet_can_fire(self):
-        log(LogType.INFO, str(os.getpid()) + "判断子弹有多少的时候的弹量为{}".format(self.current_bullet_num),
+        logger.info(str(os.getpid()) + "判断子弹有多少的时候的弹量为{}".format(self.current_bullet_num),
             is_in_file=False)
         return self.current_bullet_num > 0
 
@@ -85,12 +85,12 @@ class Weapon(AbstractEntry):
         '''
         self.current_bullet_load_time += UNIT_TIME
         if self.current_bullet_load_time >= self.bullet_load_time:
-            log(LogType.INFO, "装弹完成")
+            logger.info("装弹完成")
             self.current_bullet_num = self.config.BULLET_CAPACITY
             self.current_bullet_load_time = 0
             return True
         else:
-            log(LogType.INFO, "还在装弹，当前装弹时间为{}，还剩下的装弹时间为{}，总共花的装弹时间为{}".format(
+            logger.info("还在装弹，当前装弹时间为{}，还剩下的装弹时间为{}，总共花的装弹时间为{}".format(
                 self.current_bullet_load_time, self.bullet_load_time - self.current_bullet_load_time,
                 self.bullet_load_time), is_in_file=False)
             return False
@@ -130,7 +130,7 @@ class Bullet(AbstractEntry):
         return distance / self.velocity
 
     def step_attack_a_target_and_is_kill(self, uav_list, fun):
-        log(LogType.INFO, "id为：" + self.get_id() + "的子弹还需要飞行的时间：" + str(self.all_time_to_fly))
+        logger.info("id为：" + self.get_id() + "的子弹还需要飞行的时间：" + str(self.all_time_to_fly))
         if self.all_time_to_fly <= UNIT_TIME:
             # 时间到了，进行毁伤计算
             is_hit_and_kill = self.is_hit_kill_by_mc()
@@ -151,7 +151,7 @@ class Bullet(AbstractEntry):
                 # 子弹失效
                 return Weapon.BulletState.NO_KILLED_NO_USE
         else:
-            log(LogType.INFO, "id为：" + self.get_id() + "的子弹飞行中")
+            logger.info("id为：" + self.get_id() + "的子弹飞行中")
             # 正在飞行中
             self.all_time_to_fly -= UNIT_TIME
             return Weapon.BulletState.FLYING_USEING

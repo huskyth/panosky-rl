@@ -1,7 +1,7 @@
-from entries.phalanx.components.search_rader import *
-from entries.phalanx.components.track_rader.track_rader import *
-from entries.phalanx.components.weapon import *
-from entries.abstract_entry import AbstractEntry
+from onpolicy.envs.drone.weapons.entries.phalanx.components.search_rader import *
+from onpolicy.envs.drone.weapons.entries.phalanx.components.track_rader.track_rader import *
+from onpolicy.envs.drone.weapons.entries.phalanx.components.weapon import *
+from onpolicy.envs.drone.weapons.entries.abstract_entry import AbstractEntry
 
 
 class Phalanx(AbstractEntry):

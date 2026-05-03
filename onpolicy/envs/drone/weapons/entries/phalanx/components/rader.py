@@ -1,6 +1,6 @@
-from entries.abstract_entry import AbstractEntry
-from entries.config.global_config import *
-from common.math_tool import *
+from onpolicy.envs.drone.weapons.entries.abstract_entry import AbstractEntry, logger
+from onpolicy.envs.drone.weapons.entries.config.global_config import *
+from onpolicy.utils.math_tool import *
 
 
 class Rader(AbstractEntry):

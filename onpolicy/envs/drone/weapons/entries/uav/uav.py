@@ -74,7 +74,7 @@ class UAV(AbstractEntry):
 
     def get_mountain_exist_bool(self, is_in_search_range):
         if is_in_search_range:
-            log(LogType.INFO, "飞机ID为：" + self.get_id() + "的飞机，是否被遮挡：" + str(self.is_exist_mountain))
+            logger.info("飞机ID为：" + self.get_id() + "的飞机，是否被遮挡：" + str(self.is_exist_mountain))
         return self.is_exist_mountain
 
     def print_self(self):

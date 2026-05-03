@@ -1,4 +1,6 @@
-from common.logger import *
+from onpolicy.utils.format_logger import AppLogger
+
+logger = AppLogger().get_logger()
 
 
 class AbstractEntry:
@@ -17,7 +19,7 @@ class AbstractEntry:
                 set_none_id = i
                 break
         assert set_none_id != -1, "self not found"
-        log(LogType.INFO, "设置了列表中的无人机为None")
+        logger.info("设置了列表中的无人机为None")
         list_parameter[set_none_id] = None
 
     def _get_unique_id(self):

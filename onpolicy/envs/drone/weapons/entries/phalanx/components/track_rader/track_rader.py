@@ -40,7 +40,7 @@ class TrackRader(Rader):
         return min(t2, t1)
 
     def adjust_end_set_value(self):
-        log(LogType.INFO, "调弦结束，赋值", is_in_file=False)
+        logger.info("调弦结束，赋值", is_in_file=False)
         self.top_project_position = self.end_position
         self.top_angle_with_xoy = self.end_theta
         self.need_adjust_board_time = 0
@@ -66,7 +66,7 @@ class TrackRader(Rader):
         vertical_time = self._cal_time(abs(self.top_angle_with_xoy - self.end_theta))
 
         adjust_time = max(horizontal_time, vertical_time)
-        log(LogType.INFO, "计算一次调弦时间：{}".format(adjust_time))
+        logger.info("计算一次调弦时间：{}".format(adjust_time))
         self.need_adjust_board_time = adjust_time
 
     def build_dict(self):
@@ -93,14 +93,14 @@ class TrackRader(Rader):
     def check_can_fire(self):
         can_fire = (self.capture_time == CAPTURE_TIME)
         if can_fire:
-            log(LogType.INFO, "可以进入开火状态，捕获时间为：" + str(self.capture_time))
+            logger.info("可以进入开火状态，捕获时间为：" + str(self.capture_time))
             self.capture_time = 0
 
         return can_fire
 
     def step_capture(self):
         self.capture_time += 1
-        log(LogType.INFO, "捕获时间自增，当前捕获时间是：" + str(self.capture_time))
+        logger.info("捕获时间自增，当前捕获时间是：" + str(self.capture_time))
 
     def reset_capture_time(self):
         self.capture_time = 0
@@ -149,31 +149,31 @@ class TrackRader(Rader):
         # 计算威胁级别和判定范围
         threat_level_uav_list = self._adjust_board_prepare(search_rader, uav_list, get_uav_index_fun)
         if 0 == len(threat_level_uav_list):
-            log(LogType.INFO, "没有搜索到或者没有在跟踪范围内")
+            logger.info("没有搜索到或者没有在跟踪范围内")
             return None
         else:
-            log(LogType.INFO, "搜索到或者在跟踪范围内")
+            logger.info("搜索到或者在跟踪范围内")
         # （ entry[0]: 威胁程度，entry[1]: 对应无人机）
         max_threat_level = threat_level_uav_list[0][0]
         self.current_target = threat_level_uav_list[0][1]
         threat_level_string = ["威胁程度：" + str(entry[0]) + ", 对应无人机id：" + get_uav_index_fun(entry[1]) + "; " for
                                entry in
                                threat_level_uav_list]
-        log(LogType.INFO, "威胁程度概述：" + str(threat_level_string), is_in_file=False)
+        logger.info("威胁程度概述：" + str(threat_level_string), is_in_file=False)
         for entry in threat_level_uav_list:
             if max_threat_level < entry[0] and not entry[1].get_mountain_exist_bool(
                     self.search_rader.is_a_uav_in_search_range(entry[1])):
                 max_threat_level = entry[0]
                 self.current_target = entry[1]
         if max_threat_level > GameConfig.THREAT_LEVEL_THRESHOLD:
-            log(LogType.INFO, "找到了最大威胁程度大于阈值 " + str(
+            logger.info("找到了最大威胁程度大于阈值 " + str(
 
                 GameConfig.THREAT_LEVEL_THRESHOLD) + "的无人机：" + self.current_target.print_self())
             self.current_target = self._handle_equal_condition((max_threat_level, self.current_target),
                                                                threat_level_uav_list)
             assert self.current_target is not None, "_handle_equal_condition function exception"
         else:
-            log(LogType.INFO, "没有找到，因为最大威胁程度小于阈值 " + str(GameConfig.THREAT_LEVEL_THRESHOLD))
+            logger.info("没有找到，因为最大威胁程度小于阈值 " + str(GameConfig.THREAT_LEVEL_THRESHOLD))
             self.current_target = None
         return self.current_target
 
