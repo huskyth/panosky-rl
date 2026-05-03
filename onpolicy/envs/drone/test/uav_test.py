@@ -19,9 +19,9 @@ cf.read(str(config_path), encoding="utf-8")
 
 parser = get_config()
 all_args = parse_args(sys.argv[1:], parser)
-env = MultiUavEnv(all_args, cf=cf, is_debug=True)
+env = MultiUavEnv(cf=cf, is_debug=True)
 import numpy as np
 
 env.reset()
 while not env.is_terminal[0]:
-    env.step(np.array([[0., 0., 0., 0., 0., 0., 1., 0., 0.]]))
+    env.step(np.array([[1., 0., 0., 0., 0., 0., 0., 0., 0.]]))

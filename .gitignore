@@ -16,3 +16,4 @@ logs
 *.so
 .idea
 *.pth
+*.json
