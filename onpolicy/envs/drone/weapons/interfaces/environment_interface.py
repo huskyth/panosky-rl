@@ -1,6 +1,6 @@
-from entries.config.global_config import GameConfig, UNIT_TIME
-from factory.config_factory import ConfigFactory, ConfigEnum
-from rl_environment_interface.game import Game
+from onpolicy.envs.drone.weapons.entries.config.global_config import GameConfig, UNIT_TIME
+from onpolicy.envs.drone.weapons.factory.config_factory import ConfigFactory, ConfigEnum
+from onpolicy.envs.drone.weapons.interfaces.game import Game
 
 
 class EnvironmentInterface:
