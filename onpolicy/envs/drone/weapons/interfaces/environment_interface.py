@@ -1,0 +1,25 @@
+from entries.config.global_config import GameConfig, UNIT_TIME
+from factory.config_factory import ConfigFactory, ConfigEnum
+from rl_environment_interface.game import Game
+
+
+class EnvironmentInterface:
+    @staticmethod
+    def get_game_unit_time():
+        return UNIT_TIME
+
+    @staticmethod
+    def get_rader_detect_radius():
+        return ConfigFactory.create(config_type=ConfigEnum.phalanx).track_rader_config.get_track_distance()
+
+    @staticmethod
+    def get_fire_distance():
+        return ConfigFactory.create(config_type=ConfigEnum.phalanx).track_rader_config.get_fire_distance()
+
+    @staticmethod
+    def step(actions, uav_velocity):
+        return Game.step(actions, uav_velocity)
+
+    @staticmethod
+    def reset(number_uav, weapon_positions, uav_velocity, uav_position):
+        Game.reset(number_uav, weapon_positions, uav_velocity, uav_position)

@@ -11,17 +11,17 @@ import torch
 import torchvision.models as models
 from onpolicy.utils.format_logger import AppLogger
 
-from AStar.flyer import fly_from_9_selections
 from onpolicy.envs.drone.weapons.entries.uav.uav_enum import UAVState, AttackState
 from onpolicy.envs.drone.maps.map import Map
-from rl_environment.tools import compute_distance
-from rl_environment.uav_meta_info import TrainUAV
+from onpolicy.utils.util import compute_distance
+from onpolicy.envs.drone.uav_meta_info import TrainUAV
 
-from rl_environment_interface.environment_interface import EnvironmentInterface
+from onpolicy.envs.drone.weapons.interfaces.environment_interface import EnvironmentInterface
+
+from AStar.flyer import fly_from_9_selections
 from AStar.config import vertacal_selection, horizontal_selection
 
 warnings.filterwarnings('ignore')
-
 logger = AppLogger().get_logger()
 
 
