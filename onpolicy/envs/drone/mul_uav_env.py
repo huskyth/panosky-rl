@@ -476,7 +476,6 @@ class MultiUavEnv:
                 self.dump(msg)
                 return
 
-            last_distance_to_target = compute_distance(last_p[0].position, self.target)
             current_distance_to_target = compute_distance(uav.position, self.target)
             if uav.status == UAVState.ALIVE and current_distance_to_target <= self.task_success_radius:
                 self.reward[0] = 1
@@ -487,8 +486,6 @@ class MultiUavEnv:
                 self.dump(msg)
                 return
 
-            if current_distance_to_target <= last_distance_to_target:
-                self.reward[0] = 0.01
         if self._episode_steps >= self.max_episode_steps:
             self.reward = [0]
             msg = f'{self._episode_steps} step：超出最大步数限制'
