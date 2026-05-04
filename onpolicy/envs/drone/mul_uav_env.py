@@ -493,7 +493,9 @@ class MultiUavEnv:
             self.n_episode = self.n_episode + 1
             self.is_terminal = [True for _ in range(self.n_total_uavs)]
             logger.info(
-                f"PID-{os.getpid()}, mode-{self.mode}, episode-{self.n_episode}\033[31m[terminated]：{msg}\033[0m")
+                f"PID-{os.getpid()}, mode-{self.mode}, "
+                f"episode-{self.n_episode}\033[31m[terminated]："
+                f"{msg}\033[0m，距离为{compute_distance(self.target, current_p[0].position)}")
             self.dump(msg)
             return
 
