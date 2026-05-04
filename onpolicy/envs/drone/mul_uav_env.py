@@ -124,12 +124,12 @@ class MultiUavEnv:
                        dtype=np.float32)
             for _ in range(self.n_total_uavs)]
 
-    def __init__(self, mode="train", cf=None, episode_limit=500, is_debug=False):
+    def __init__(self, rank, mode="train", cf=None, episode_limit=500, is_debug=False):
         RESNET18 = models.resnet18(pretrained=True)
         path = os.path.join(os.path.dirname(__file__), 'resnet18.pth')
         RESNET18.load_state_dict(torch.load(path, weights_only=False))
         self.res18 = RESNET18
-
+        self.rank = rank
         # train为训练模式，test为测试模式
         self.mode = mode
         self.is_debug = is_debug
@@ -383,7 +383,7 @@ class MultiUavEnv:
                     self.raw_uavs[u].status = UAVState.DESTROYED
         data_save = {"uva_state": [x.to_dict() for x in self.raw_uavs], "uva_actions": action.tolist(),
                      "_episode_steps": self._episode_steps}
-        logger.info(f"无人机和目标的距离为 {compute_distance(self.raw_uavs[0].position, self.target)}")
+        logger.info(f"无人机和目标的距离为 {compute_distance(self.raw_uavs[0].position, self.target)}", mute=self.rank == 0)
         self.episode_data.append(data_save)
         # 计算奖励值和终止符号
         self.set_reward(last_state)

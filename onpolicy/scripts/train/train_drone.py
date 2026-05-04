@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import configparser
 import sys
 import os
 import swanlab as wandb
@@ -8,7 +9,7 @@ import numpy as np
 from pathlib import Path
 import torch
 from onpolicy.config import get_config
-from onpolicy.envs.drone.uav_env import uav_env
+from onpolicy.envs.drone.uav_env import uav_env, logger
 from onpolicy.envs.env_wrappers import SubprocVecEnv, DummyVecEnv
 
 """Train script for MPEs."""
@@ -18,7 +19,7 @@ def make_train_env(all_args):
     def get_env_fn(rank):
         def init_env():
             if all_args.env_name == "UAV":
-                env = uav_env(all_args, "train")
+                env = uav_env(all_args, "train", rank)
             else:
                 print("Can not support the " +
                       all_args.env_name + "environment.")
@@ -38,7 +39,7 @@ def make_eval_env(all_args):
     def get_env_fn(rank):
         def init_env():
             if all_args.env_name == "UAV":
-                env = uav_env(all_args, "eval")
+                env = uav_env(all_args, "eval", rank)
             else:
                 print("Can not support the " +
                       all_args.env_name + "environment.")
@@ -56,6 +57,13 @@ def make_eval_env(all_args):
 
 def parse_args(args, parser):
     all_args = parser.parse_known_args(args)[0]
+    config_path = Path(__file__).parent.parent.parent / f'envs/drone/config/{all_args.ini_name}'
+    cf = configparser.ConfigParser()
+    cf.read(str(config_path), encoding="utf-8")
+    n_agent = cf.getint('env', 'n_task_uavs') + cf.getint('env', 'n_decoy_uavs')
+    if all_args.num_agents != n_agent:
+        logger.info(f"init配置为主 ini: {n_agent}, config: {all_args.num_agents}")
+    all_args.num_agents = n_agent
 
     return all_args
 
