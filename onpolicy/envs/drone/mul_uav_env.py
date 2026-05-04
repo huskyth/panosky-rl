@@ -321,16 +321,16 @@ class MultiUavEnv:
         velocity = temp_uav.get_normalize_velocity()
         right_vector = normalize(self.right_vector[uav_id])
 
-        map_obs = self.map.generate_img(position[0], position[1])[0][0]
-        import cv2
-        map_obs = cv2.resize(map_obs, dsize=(224, 224))[None, None, :, :].repeat(3, axis=1)
-        map_obs = torch.tensor(map_obs).float()
-        map_obs = (map_obs - map_obs.min()) / (map_obs.max() - map_obs.min())
-        map_obs = self.res18(map_obs).tolist()
+        # map_obs = self.map.generate_img(position[0], position[1])[0][0]
+        # import cv2
+        # map_obs = cv2.resize(map_obs, dsize=(224, 224))[None, None, :, :].repeat(3, axis=1)
+        # map_obs = torch.tensor(map_obs).float()
+        # map_obs = (map_obs - map_obs.min()) / (map_obs.max() - map_obs.min())
+        # map_obs = self.res18(map_obs).tolist()
         weapon = (np.array(self.weapon) / normal_).tolist()
         target = (np.array(self.target) / normal_).tolist()
 
-        return position + velocity + right_vector + weapon + target + map_obs[0]
+        return position + velocity + right_vector + weapon + target
 
     def step(self, action):
         # 输入动作先转换为两个离散动作
