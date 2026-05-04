@@ -68,6 +68,8 @@ class MPERunner(Runner):
                                 idv_rews.append(info[agent_id]['individual_reward'])
                         agent_k = 'agent%i/individual_rewards' % agent_id
                         env_infos[agent_k] = idv_rews
+                elif self.env_name == 'UAV':
+                    env_infos = {}
 
                 train_infos["average_episode_rewards"] = np.mean(self.buffer.rewards) * self.episode_length
                 print("average episode rewards is {}".format(train_infos["average_episode_rewards"]))
