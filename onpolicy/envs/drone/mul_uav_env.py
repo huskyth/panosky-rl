@@ -383,7 +383,6 @@ class MultiUavEnv:
                     self.raw_uavs[u].status = UAVState.DESTROYED
         data_save = {"uva_state": [x.to_dict() for x in self.raw_uavs], "uva_actions": action.tolist(),
                      "_episode_steps": self._episode_steps}
-        logger.info(f"无人机和目标的距离为 {compute_distance(self.raw_uavs[0].position, self.target)}", mute=self.rank == 0)
         self.episode_data.append(data_save)
         # 计算奖励值和终止符号
         self.set_reward(last_state)
