@@ -391,7 +391,6 @@ class MultiUavEnv:
                                                                            range(self.n_total_uavs)]
 
     def judge_uav_collision_and_set(self, current_uav_idx, next_x, nex_y, next_z):
-        return
         p_x, p_y, p_z = self.raw_uavs[current_uav_idx].position
         # 判断是否与地面发生碰撞
         if self.map.judge_mountain(p_x, p_y, p_z, next_x, nex_y, next_z, self.coll_safe_dis, 'ground'):
