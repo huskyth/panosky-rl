@@ -110,6 +110,7 @@ def main(args):
 
     # wandb
     if all_args.use_wandb:
+        wandb.login(api_key="rdGaOSnlBY0KBDnNdkzja")
         run = wandb.init(config=all_args,
                          project=all_args.env_name,
                          entity=all_args.user_name,

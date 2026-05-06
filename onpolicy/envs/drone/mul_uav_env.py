@@ -125,10 +125,10 @@ class MultiUavEnv:
             for _ in range(self.n_total_uavs)]
 
     def __init__(self, rank, mode="train", cf=None, episode_limit=500, is_debug=False):
-        RESNET18 = models.resnet18(pretrained=True)
-        path = os.path.join(os.path.dirname(__file__), 'resnet18.pth')
-        RESNET18.load_state_dict(torch.load(path, weights_only=False))
-        self.res18 = RESNET18
+        # RESNET18 = models.resnet18(pretrained=True)
+        # path = os.path.join(os.path.dirname(__file__), 'resnet18.pth')
+        # RESNET18.load_state_dict(torch.load(path, weights_only=False))
+        # self.res18 = RESNET18
         self.rank = rank
         # train为训练模式，test为测试模式
         self.mode = mode
