@@ -17,6 +17,7 @@ class R_Actor(nn.Module):
     :param action_space: (gym.Space) action space.
     :param device: (torch.device) specifies the device to run on (cpu/gpu).
     """
+
     def __init__(self, args, obs_space, action_space, device=torch.device("cpu")):
         super(R_Actor, self).__init__()
         self.hidden_size = args.hidden_size
@@ -30,7 +31,13 @@ class R_Actor(nn.Module):
         self.tpdv = dict(dtype=torch.float32, device=device)
 
         obs_shape = get_shape_from_obs_space(obs_space)
-        base = CNNBase if len(obs_shape) == 3 else MLPBase
+        if isinstance(obs_shape, dict):
+            base_cnn = CNNBase
+            base_linear = MLPBase
+        elif len(obs_shape) == 3:
+            base = CNNBase
+        else:
+            base = MLPBase
         self.base = base(args, obs_shape)
 
         if self._use_naive_recurrent_policy or self._use_recurrent_policy:
@@ -100,19 +107,20 @@ class R_Actor(nn.Module):
             actor_features, rnn_states = self.rnn(actor_features, rnn_states, masks)
 
         if self.algo == "hatrpo":
-            action_log_probs, dist_entropy ,action_mu, action_std, all_probs= self.act.evaluate_actions_trpo(actor_features,
-                                                                    action, available_actions,
-                                                                    active_masks=
-                                                                    active_masks if self._use_policy_active_masks
-                                                                    else None)
+            action_log_probs, dist_entropy, action_mu, action_std, all_probs = self.act.evaluate_actions_trpo(
+                actor_features,
+                action, available_actions,
+                active_masks=
+                active_masks if self._use_policy_active_masks
+                else None)
 
             return action_log_probs, dist_entropy, action_mu, action_std, all_probs
         else:
             action_log_probs, dist_entropy = self.act.evaluate_actions(actor_features,
-                                                                    action, available_actions,
-                                                                    active_masks=
-                                                                    active_masks if self._use_policy_active_masks
-                                                                    else None)
+                                                                       action, available_actions,
+                                                                       active_masks=
+                                                                       active_masks if self._use_policy_active_masks
+                                                                       else None)
 
         return action_log_probs, dist_entropy
 
@@ -125,6 +133,7 @@ class R_Critic(nn.Module):
     :param cent_obs_space: (gym.Space) (centralized) observation space.
     :param device: (torch.device) specifies the device to run on (cpu/gpu).
     """
+
     def __init__(self, args, cent_obs_space, device=torch.device("cpu")):
         super(R_Critic, self).__init__()
         self.hidden_size = args.hidden_size

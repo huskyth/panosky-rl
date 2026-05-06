@@ -108,6 +108,8 @@ class MultiUavEnv:
         assert self.task_success_radius > self.uav_velocity_value
 
     def init_space(self):
+        # 定义状态空间：线性数据 + 图像
+
         # configure spaces
         self.action_space = []
         self.observation_space = []
@@ -116,12 +118,32 @@ class MultiUavEnv:
         for agent_id in range(self.n_total_uavs):
             self.action_space.append(spaces.Discrete(9))
             obs_dim = self.get_observation_size_of_a_uav()
-            self.observation_space.append(
-                spaces.Box(low=-np.inf, high=+np.inf, shape=(self.map_output_dimension + obs_dim,), dtype=np.float32))
-        # TODO://待检查 share_observation_space先这样写
+            observation_space = spaces.Dict({
+                # 1) 线性数据：一维连续向量（Box）
+                "linear": spaces.Box(low=-np.inf, high=+np.inf, shape=(obs_dim,), dtype=np.float32),
+
+                # 2) 图像数据：高/宽/通道（最常用格式 HWC）
+                "image": spaces.Box(
+                    low=0,  # 像素 0~255
+                    high=255,
+                    shape=(32, 32, 3),  # 高84 × 宽84 × 3通道(RGB)
+                    dtype=np.uint8
+                )
+            })
+            self.observation_space.append(observation_space)
         self.share_observation_space = [
-            spaces.Box(low=-np.inf, high=+np.inf, shape=(self.n_total_uavs * (self.map_output_dimension + obs_dim),),
-                       dtype=np.float32)
+            spaces.Dict({
+                # 1) 线性数据：一维连续向量（Box）
+                "linear": spaces.Box(low=-np.inf, high=+np.inf, shape=(obs_dim,), dtype=np.float32),
+
+                # 2) 图像数据：高/宽/通道（最常用格式 HWC）
+                "image": spaces.Box(
+                    low=0,  # 像素 0~255
+                    high=255,
+                    shape=(32, 32, 3),  # 高84 × 宽84 × 3通道(RGB)
+                    dtype=np.uint8
+                )
+            })
             for _ in range(self.n_total_uavs)]
 
     def __init__(self, rank, mode="train", cf=None, episode_limit=500, is_debug=False):

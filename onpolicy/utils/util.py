@@ -39,6 +39,11 @@ def get_shape_from_obs_space(obs_space):
         obs_shape = obs_space.shape
     elif obs_space.__class__.__name__ == 'list':
         obs_shape = obs_space
+    elif obs_space.__class__.__name__ == 'Dict':
+        shape_dict = {}
+        for k in obs_space.spaces.keys():
+            shape_dict[k] = get_shape_from_obs_space(obs_space.spaces[k])
+        return shape_dict
     else:
         raise NotImplementedError
     return obs_shape
