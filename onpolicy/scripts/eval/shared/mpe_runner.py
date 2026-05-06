@@ -1,7 +1,7 @@
 import time
 import numpy as np
 import torch
-from onpolicy.runner.shared.base_runner import Runner
+from onpolicy.scripts.eval.shared.base_runner import Runner
 import swanlab as wandb
 import imageio
 
