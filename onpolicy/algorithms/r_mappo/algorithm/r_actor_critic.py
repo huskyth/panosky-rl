@@ -34,11 +34,11 @@ class R_Actor(nn.Module):
         if isinstance(obs_shape, dict):
             base_cnn = CNNBase
             base_linear = MLPBase
-        elif len(obs_shape) == 3:
-            base = CNNBase
+            self.base_cnn = base_cnn(args, obs_shape['image'])
+            self.base_linear = base_linear(args, obs_shape['linear'])
         else:
-            base = MLPBase
-        self.base = base(args, obs_shape)
+            base = CNNBase if len(obs_shape) == 3 else MLPBase
+            self.base = base(args, obs_shape)
 
         if self._use_naive_recurrent_policy or self._use_recurrent_policy:
             self.rnn = RNNLayer(self.hidden_size, self.hidden_size, self._recurrent_N, self._use_orthogonal)
@@ -146,8 +146,14 @@ class R_Critic(nn.Module):
         init_method = [nn.init.xavier_uniform_, nn.init.orthogonal_][self._use_orthogonal]
 
         cent_obs_shape = get_shape_from_obs_space(cent_obs_space)
-        base = CNNBase if len(cent_obs_shape) == 3 else MLPBase
-        self.base = base(args, cent_obs_shape)
+        if isinstance(cent_obs_shape, dict):
+            base_cnn = CNNBase
+            base_linear = MLPBase
+            self.base_cnn = base_cnn(args, cent_obs_shape['image'])
+            self.base_linear = base_linear(args, cent_obs_shape['linear'])
+        else:
+            base = CNNBase if len(cent_obs_shape) == 3 else MLPBase
+            self.base = base(args, cent_obs_shape)
 
         if self._use_naive_recurrent_policy or self._use_recurrent_policy:
             self.rnn = RNNLayer(self.hidden_size, self.hidden_size, self._recurrent_N, self._use_orthogonal)

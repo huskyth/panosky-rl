@@ -2,6 +2,9 @@ import torch
 import numpy as np
 import torch.nn.functional as F
 from onpolicy.utils.util import get_shape_from_obs_space, get_shape_from_act_space
+from onpolicy.utils.format_logger import AppLogger
+
+logger = AppLogger().get_logger()
 
 
 def _flatten(T, N, x):
@@ -17,6 +20,7 @@ def _shuffle_agent_grid(x, y):
     # cols = np.stack([np.random.permutation(y) for _ in range(x)])
     cols = np.stack([np.arange(y) for _ in range(x)])
     return rows, cols
+
 
 class SharedReplayBuffer(object):
     """
@@ -41,19 +45,29 @@ class SharedReplayBuffer(object):
         self._use_proper_time_limits = args.use_proper_time_limits
         self.algo = args.algorithm_name
         self.num_agents = num_agents
-
+        ori_obs_space = obs_space
         obs_shape = get_shape_from_obs_space(obs_space)
+        obs_shape_image = obs_shape['image']
+        obs_shape_linear = obs_shape['linear']
+
         share_obs_shape = get_shape_from_obs_space(cent_obs_space)
+        share_obs_shape_image = share_obs_shape['image']
+        share_obs_shape_linear = share_obs_shape['linear']
+        try:
+            if type(obs_shape[-1]) == list:
+                obs_shape = obs_shape[:1]
 
-        if type(obs_shape[-1]) == list:
-            obs_shape = obs_shape[:1]
+            if type(share_obs_shape[-1]) == list:
+                share_obs_shape = share_obs_shape[:1]
+        except Exception as e:
+            logger.info(f"obs_shape、share_obs_shape解析失败 {e}")
 
-        if type(share_obs_shape[-1]) == list:
-            share_obs_shape = share_obs_shape[:1]
-
-        self.share_obs = np.zeros((self.episode_length + 1, self.n_rollout_threads, num_agents, *share_obs_shape),
+        self.share_obs_image = np.zeros((self.episode_length + 1, self.n_rollout_threads, num_agents, *share_obs_shape_image),
                                   dtype=np.float32)
-        self.obs = np.zeros((self.episode_length + 1, self.n_rollout_threads, num_agents, *obs_shape), dtype=np.float32)
+        self.share_obs_linear = np.zeros((self.episode_length + 1, self.n_rollout_threads, num_agents, *share_obs_shape_linear),
+                                  dtype=np.float32)
+        self.obs_linear = np.zeros((self.episode_length + 1, self.n_rollout_threads, num_agents, *obs_shape_linear), dtype=np.float32)
+        self.obs_image = np.zeros((self.episode_length + 1, self.n_rollout_threads, num_agents, *obs_shape_image), dtype=np.float32)
 
         self.rnn_states = np.zeros(
             (self.episode_length + 1, self.n_rollout_threads, num_agents, self.recurrent_N, self.hidden_size),
@@ -334,8 +348,8 @@ class SharedReplayBuffer(object):
                 adv_targ = advantages[indices].reshape(-1, *advantages.shape[2:])
 
             yield share_obs_batch, obs_batch, rnn_states_batch, rnn_states_critic_batch, actions_batch, \
-                  value_preds_batch, return_batch, masks_batch, active_masks_batch, old_action_log_probs_batch, \
-                  adv_targ, available_actions_batch
+                value_preds_batch, return_batch, masks_batch, active_masks_batch, old_action_log_probs_batch, \
+                adv_targ, available_actions_batch
 
     def feed_forward_generator(self, advantages, num_mini_batch=None, mini_batch_size=None):
         """
@@ -395,9 +409,9 @@ class SharedReplayBuffer(object):
             else:
                 adv_targ = advantages[indices]
 
-            yield share_obs_batch, obs_batch, rnn_states_batch, rnn_states_critic_batch, actions_batch,\
-                  value_preds_batch, return_batch, masks_batch, active_masks_batch, old_action_log_probs_batch,\
-                  adv_targ, available_actions_batch
+            yield share_obs_batch, obs_batch, rnn_states_batch, rnn_states_critic_batch, actions_batch, \
+                value_preds_batch, return_batch, masks_batch, active_masks_batch, old_action_log_probs_batch, \
+                adv_targ, available_actions_batch
 
     def naive_recurrent_generator(self, advantages, num_mini_batch):
         """
@@ -492,9 +506,9 @@ class SharedReplayBuffer(object):
             old_action_log_probs_batch = _flatten(T, N, old_action_log_probs_batch)
             adv_targ = _flatten(T, N, adv_targ)
 
-            yield share_obs_batch, obs_batch, rnn_states_batch, rnn_states_critic_batch, actions_batch,\
-                  value_preds_batch, return_batch, masks_batch, active_masks_batch, old_action_log_probs_batch,\
-                  adv_targ, available_actions_batch
+            yield share_obs_batch, obs_batch, rnn_states_batch, rnn_states_critic_batch, actions_batch, \
+                value_preds_batch, return_batch, masks_batch, active_masks_batch, old_action_log_probs_batch, \
+                adv_targ, available_actions_batch
 
     def recurrent_generator(self, advantages, num_mini_batch, data_chunk_length):
         """
@@ -603,6 +617,6 @@ class SharedReplayBuffer(object):
             old_action_log_probs_batch = _flatten(L, N, old_action_log_probs_batch)
             adv_targ = _flatten(L, N, adv_targ)
 
-            yield share_obs_batch, obs_batch, rnn_states_batch, rnn_states_critic_batch, actions_batch,\
-                  value_preds_batch, return_batch, masks_batch, active_masks_batch, old_action_log_probs_batch,\
-                  adv_targ, available_actions_batch
+            yield share_obs_batch, obs_batch, rnn_states_batch, rnn_states_critic_batch, actions_batch, \
+                value_preds_batch, return_batch, masks_batch, active_masks_batch, old_action_log_probs_batch, \
+                adv_targ, available_actions_batch
