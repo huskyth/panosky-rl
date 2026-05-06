@@ -3,6 +3,7 @@ from .util import init
 
 """CNN Modules and utils."""
 
+
 class Flatten(nn.Module):
     def forward(self, x):
         return x.view(x.size(0), -1)
@@ -31,8 +32,9 @@ class CNNLayer(nn.Module):
                   ),
             active_func,
             Flatten(),
-            init_(nn.Linear(hidden_size // 2 * (input_width - kernel_size + stride) * (input_height - kernel_size + stride),
-                            hidden_size)
+            init_(nn.Linear(
+                hidden_size // 2 * (input_width - kernel_size + stride) * (input_height - kernel_size + stride),
+                hidden_size)
                   ),
             active_func,
             init_(nn.Linear(hidden_size, hidden_size)), active_func)

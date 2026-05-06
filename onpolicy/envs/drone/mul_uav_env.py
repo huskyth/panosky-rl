@@ -126,7 +126,7 @@ class MultiUavEnv:
                 "image": spaces.Box(
                     low=0,  # 像素 0~255
                     high=255,
-                    shape=(32, 32, 3),  # 高84 × 宽84 × 3通道(RGB)
+                    shape=(1, 32, 32),  # 高84 × 宽84 × 3通道(RGB)
                     dtype=np.uint8
                 )
             })
@@ -140,17 +140,13 @@ class MultiUavEnv:
                 "image": spaces.Box(
                     low=0,  # 像素 0~255
                     high=255,
-                    shape=(32, 32, 3),  # 高84 × 宽84 × 3通道(RGB)
+                    shape=(1, 32, 32),  # 高84 × 宽84 × 3通道(RGB)
                     dtype=np.uint8
                 )
             })
             for _ in range(self.n_total_uavs)]
 
     def __init__(self, rank, mode="train", cf=None, episode_limit=500, is_debug=False):
-        # RESNET18 = models.resnet18(pretrained=True)
-        # path = os.path.join(os.path.dirname(__file__), 'resnet18.pth')
-        # RESNET18.load_state_dict(torch.load(path, weights_only=False))
-        # self.res18 = RESNET18
         self.rank = rank
         # train为训练模式，test为测试模式
         self.mode = mode
@@ -343,16 +339,12 @@ class MultiUavEnv:
         velocity = temp_uav.get_normalize_velocity()
         right_vector = normalize(self.right_vector[uav_id])
 
-        # map_obs = self.map.generate_img(position[0], position[1])[0][0]
-        # import cv2
-        # map_obs = cv2.resize(map_obs, dsize=(224, 224))[None, None, :, :].repeat(3, axis=1)
-        # map_obs = torch.tensor(map_obs).float()
-        # map_obs = (map_obs - map_obs.min()) / (map_obs.max() - map_obs.min())
-        # map_obs = self.res18(map_obs).tolist()
+        map_obs = self.map.generate_img(position[0], position[1])[0][0]
+
         weapon = (np.array(self.weapon) / normal_).tolist()
         target = (np.array(self.target) / normal_).tolist()
 
-        return position + velocity + right_vector + weapon + target
+        return position + velocity + right_vector + weapon + target, [map_obs]
 
     def step(self, action):
         # 输入动作先转换为两个离散动作

@@ -51,7 +51,7 @@ class SharedReplayBuffer(object):
         obs_shape_linear = obs_shape['linear']
 
         share_obs_shape = get_shape_from_obs_space(cent_obs_space)
-        share_obs_shape_image = share_obs_shape['image']
+        self.share_obs_shape_image = share_obs_shape['image']
         share_obs_shape_linear = share_obs_shape['linear']
         try:
             if type(obs_shape[-1]) == list:
@@ -60,14 +60,18 @@ class SharedReplayBuffer(object):
             if type(share_obs_shape[-1]) == list:
                 share_obs_shape = share_obs_shape[:1]
         except Exception as e:
-            logger.info(f"obs_shape、share_obs_shape解析失败 {e}")
+            logger.info(f"obs_shape、share_obs_shape解析失败，暂时忽略 {e}")
 
-        self.share_obs_image = np.zeros((self.episode_length + 1, self.n_rollout_threads, num_agents, *share_obs_shape_image),
+        self.share_obs_image = np.zeros(
+            (self.episode_length + 1, self.n_rollout_threads, num_agents, *self.share_obs_shape_image),
+            dtype=np.float32)
+        self.share_obs_linear = np.zeros(
+            (self.episode_length + 1, self.n_rollout_threads, num_agents, *share_obs_shape_linear),
+            dtype=np.float32)
+        self.obs_linear = np.zeros((self.episode_length + 1, self.n_rollout_threads, num_agents, *obs_shape_linear),
+                                   dtype=np.float32)
+        self.obs_image = np.zeros((self.episode_length + 1, self.n_rollout_threads, num_agents, *obs_shape_image),
                                   dtype=np.float32)
-        self.share_obs_linear = np.zeros((self.episode_length + 1, self.n_rollout_threads, num_agents, *share_obs_shape_linear),
-                                  dtype=np.float32)
-        self.obs_linear = np.zeros((self.episode_length + 1, self.n_rollout_threads, num_agents, *obs_shape_linear), dtype=np.float32)
-        self.obs_image = np.zeros((self.episode_length + 1, self.n_rollout_threads, num_agents, *obs_shape_image), dtype=np.float32)
 
         self.rnn_states = np.zeros(
             (self.episode_length + 1, self.n_rollout_threads, num_agents, self.recurrent_N, self.hidden_size),
