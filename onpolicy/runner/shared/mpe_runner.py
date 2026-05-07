@@ -108,8 +108,10 @@ class MPERunner(Runner):
     def collect(self, step):
         self.trainer.prep_rollout()
         value, action, action_log_prob, rnn_states, rnn_states_critic \
-            = self.trainer.policy.get_actions(np.concatenate(self.buffer.share_obs[step]),
-                                              np.concatenate(self.buffer.obs[step]),
+            = self.trainer.policy.get_actions(np.concatenate(self.buffer.share_obs_image[step]),
+                                              np.concatenate(self.buffer.share_obs_linear[step]),
+                                              np.concatenate(self.buffer.obs_image[step]),
+                                              np.concatenate(self.buffer.obs_linear[step]),
                                               np.concatenate(self.buffer.rnn_states[step]),
                                               np.concatenate(self.buffer.rnn_states_critic[step]),
                                               np.concatenate(self.buffer.masks[step]))

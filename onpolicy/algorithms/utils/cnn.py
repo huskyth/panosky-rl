@@ -53,7 +53,7 @@ class CNNBase(nn.Module):
         self._use_ReLU = args.use_ReLU
         self.hidden_size = args.hidden_size
 
-        self.cnn = CNNLayer(obs_shape, self.hidden_size, self._use_orthogonal, self._use_ReLU)
+        self.cnn = CNNLayer(obs_shape, self.hidden_size // 2, self._use_orthogonal, self._use_ReLU)
 
     def forward(self, x):
         x = self.cnn(x)

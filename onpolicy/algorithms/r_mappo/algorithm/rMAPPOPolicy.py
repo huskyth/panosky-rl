@@ -45,7 +45,8 @@ class R_MAPPOPolicy:
         update_linear_schedule(self.actor_optimizer, episode, episodes, self.lr)
         update_linear_schedule(self.critic_optimizer, episode, episodes, self.critic_lr)
 
-    def get_actions(self, cent_obs, obs, rnn_states_actor, rnn_states_critic, masks, available_actions=None,
+    def get_actions(self, cent_obs_img, cent_obs_linear, obs_image, obs_linear, rnn_states_actor, rnn_states_critic,
+                    masks, available_actions=None,
                     deterministic=False):
         """
         Compute actions and value function predictions for the given inputs.
@@ -64,13 +65,13 @@ class R_MAPPOPolicy:
         :return rnn_states_actor: (torch.Tensor) updated actor network RNN states.
         :return rnn_states_critic: (torch.Tensor) updated critic network RNN states.
         """
-        actions, action_log_probs, rnn_states_actor = self.actor(obs,
+        actions, action_log_probs, rnn_states_actor = self.actor(obs_image, obs_linear,
                                                                  rnn_states_actor,
                                                                  masks,
                                                                  available_actions,
                                                                  deterministic)
 
-        values, rnn_states_critic = self.critic(cent_obs, rnn_states_critic, masks)
+        values, rnn_states_critic = self.critic(cent_obs_img, cent_obs_linear, rnn_states_critic, masks)
         return values, actions, action_log_probs, rnn_states_actor, rnn_states_critic
 
     def get_values(self, cent_obs, rnn_states_critic, masks):
