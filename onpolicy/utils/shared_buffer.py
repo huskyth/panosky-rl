@@ -180,8 +180,10 @@ class SharedReplayBuffer(object):
 
     def after_update(self):
         """Copy last timestep data to first index. Called after update to model."""
-        self.share_obs[0] = self.share_obs[-1].copy()
-        self.obs[0] = self.obs[-1].copy()
+        self.share_obs_image[0] = self.share_obs_image[-1].copy()
+        self.share_obs_linear[0] = self.share_obs_linear[-1].copy()
+        self.obs_image[0] = self.obs_image[-1].copy()
+        self.obs_linear[0] = self.obs_linear[-1].copy()
         self.rnn_states[0] = self.rnn_states[-1].copy()
         self.rnn_states_critic[0] = self.rnn_states_critic[-1].copy()
         self.masks[0] = self.masks[-1].copy()
