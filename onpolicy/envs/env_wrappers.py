@@ -263,7 +263,12 @@ class SubprocVecEnv(ShareVecEnv):
         results = [remote.recv() for remote in self.remotes]
         self.waiting = False
         obs, rews, dones, infos = zip(*results)
-        return np.stack(obs), np.stack(rews), np.stack(dones), infos
+        imag_obs = []
+        lin_obs = []
+        for oi in obs:
+            lin_obs.append([o[0] for o in oi])
+            imag_obs.append([o[1] for o in oi])
+        return np.stack(imag_obs), np.stack(lin_obs), np.stack(rews), np.stack(dones), infos
 
     def reset(self):
         for remote in self.remotes:

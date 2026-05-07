@@ -31,9 +31,9 @@ class MPERunner(Runner):
                 values, actions, action_log_probs, rnn_states, rnn_states_critic, actions_env = self.collect(step)
 
                 # Obser reward and next obs
-                obs, rewards, dones, infos = self.envs.step(actions_env)
+                obs_img, obs_lin, rewards, dones, infos = self.envs.step(actions_env)
 
-                data = obs, rewards, dones, infos, values, actions, action_log_probs, rnn_states, rnn_states_critic
+                data = obs_img, obs_lin, rewards, dones, infos, values, actions, action_log_probs, rnn_states, rnn_states_critic
 
                 # insert data into buffer
                 self.insert(data)
@@ -137,7 +137,7 @@ class MPERunner(Runner):
         return values, actions, action_log_probs, rnn_states, rnn_states_critic, actions_env
 
     def insert(self, data):
-        obs, rewards, dones, infos, values, actions, action_log_probs, rnn_states, rnn_states_critic = data
+        obs_img, obs_lin, rewards, dones, infos, values, actions, action_log_probs, rnn_states, rnn_states_critic = data
 
         rnn_states[dones == True] = np.zeros(((dones == True).sum(), self.recurrent_N, self.hidden_size),
                                              dtype=np.float32)
@@ -147,13 +147,20 @@ class MPERunner(Runner):
         masks[dones == True] = np.zeros(((dones == True).sum(), 1), dtype=np.float32)
 
         if self.use_centralized_V:
-            share_obs = obs.reshape(self.n_rollout_threads, -1)
-            share_obs = np.expand_dims(share_obs, 1).repeat(self.num_agents, axis=1)
+            share_obs_linear = obs_lin.reshape(self.n_rollout_threads, -1)
+            share_obs_linear = np.expand_dims(share_obs_linear, 1).repeat(self.num_agents, axis=1)
+
+            share_obs_img = obs_img.reshape(self.n_rollout_threads, -1)
+            share_obs_img = np.expand_dims(share_obs_img, 1).repeat(self.num_agents, axis=1)
+            share_obs_img = share_obs_img.reshape(
+                *share_obs_img.shape[:-1], *self.buffer.share_obs_shape_image)
+            self.buffer.insert(share_obs_img, share_obs_linear, obs_img, obs_lin, rnn_states, rnn_states_critic,
+                               actions,
+                               action_log_probs, values, rewards,
+                               masks)
         else:
             share_obs = obs
-
-        self.buffer.insert(share_obs, obs, rnn_states, rnn_states_critic, actions, action_log_probs, values, rewards,
-                           masks)
+            raise Exception("Not implemented")
 
     @torch.no_grad()
     def eval(self, total_num_steps):

@@ -105,7 +105,8 @@ class SharedReplayBuffer(object):
 
         self.step = 0
 
-    def insert(self, share_obs, obs, rnn_states_actor, rnn_states_critic, actions, action_log_probs,
+    def insert(self, share_obs_img, share_obs_lin, obs_img, obs_lin, rnn_states_actor, rnn_states_critic, actions,
+               action_log_probs,
                value_preds, rewards, masks, bad_masks=None, active_masks=None, available_actions=None):
         """
         Insert data into the buffer.
@@ -122,8 +123,10 @@ class SharedReplayBuffer(object):
         :param active_masks: (np.ndarray) denotes whether an agent is active or dead in the env.
         :param available_actions: (np.ndarray) actions available to each agent. If None, all actions are available.
         """
-        self.share_obs[self.step + 1] = share_obs.copy()
-        self.obs[self.step + 1] = obs.copy()
+        self.share_obs_image[self.step + 1] = share_obs_img.copy()
+        self.share_obs_linear[self.step + 1] = share_obs_lin.copy()
+        self.obs_image[self.step + 1] = obs_img.copy()
+        self.obs_linear[self.step + 1] = obs_lin.copy()
         self.rnn_states[self.step + 1] = rnn_states_actor.copy()
         self.rnn_states_critic[self.step + 1] = rnn_states_critic.copy()
         self.actions[self.step] = actions.copy()
