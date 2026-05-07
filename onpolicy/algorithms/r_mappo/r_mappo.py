@@ -5,6 +5,7 @@ from onpolicy.utils.util import get_gard_norm, huber_loss, mse_loss
 from onpolicy.utils.valuenorm import ValueNorm
 from onpolicy.algorithms.utils.util import check
 
+
 class R_MAPPO():
     """
     Trainer class for MAPPO to update policies.
@@ -12,6 +13,7 @@ class R_MAPPO():
     :param policy: (R_MAPPO_Policy) policy to update.
     :param device: (torch.device) specifies the device to run on (cpu/gpu).
     """
+
     def __init__(self,
                  args,
                  policy,
@@ -27,7 +29,7 @@ class R_MAPPO():
         self.data_chunk_length = args.data_chunk_length
         self.value_loss_coef = args.value_loss_coef
         self.entropy_coef = args.entropy_coef
-        self.max_grad_norm = args.max_grad_norm       
+        self.max_grad_norm = args.max_grad_norm
         self.huber_delta = args.huber_delta
 
         self._use_recurrent_policy = args.use_recurrent_policy
@@ -39,9 +41,10 @@ class R_MAPPO():
         self._use_valuenorm = args.use_valuenorm
         self._use_value_active_masks = args.use_value_active_masks
         self._use_policy_active_masks = args.use_policy_active_masks
-        
-        assert (self._use_popart and self._use_valuenorm) == False, ("self._use_popart and self._use_valuenorm can not be set True simultaneously")
-        
+
+        assert (self._use_popart and self._use_valuenorm) == False, (
+            "self._use_popart and self._use_valuenorm can not be set True simultaneously")
+
         if self._use_popart:
             self.value_normalizer = self.policy.critic.v_out
         elif self._use_valuenorm:
@@ -60,7 +63,7 @@ class R_MAPPO():
         :return value_loss: (torch.Tensor) value function loss.
         """
         value_pred_clipped = value_preds_batch + (values - value_preds_batch).clamp(-self.clip_param,
-                                                                                        self.clip_param)
+                                                                                    self.clip_param)
         if self._use_popart or self._use_valuenorm:
             self.value_normalizer.update(return_batch)
             error_clipped = self.value_normalizer.normalize(return_batch) - value_pred_clipped
@@ -101,14 +104,15 @@ class R_MAPPO():
         :return actor_grad_norm: (torch.Tensor) gradient norm from actor update.
         :return imp_weights: (torch.Tensor) importance sampling weights.
         """
-        if len(sample) == 12:
-            share_obs_batch, obs_batch, rnn_states_batch, rnn_states_critic_batch, actions_batch, \
-            value_preds_batch, return_batch, masks_batch, active_masks_batch, old_action_log_probs_batch, \
-            adv_targ, available_actions_batch = sample
+        if len(sample) == 14:
+            share_obs_img_batch, share_obs_lin_batch, obs_image_batch, obs_lin_batch, rnn_states_batch, rnn_states_critic_batch, actions_batch, \
+                value_preds_batch, return_batch, masks_batch, active_masks_batch, old_action_log_probs_batch, \
+                adv_targ, available_actions_batch = sample
         else:
+            raise Exception("Not implements")
             share_obs_batch, obs_batch, rnn_states_batch, rnn_states_critic_batch, actions_batch, \
-            value_preds_batch, return_batch, masks_batch, active_masks_batch, old_action_log_probs_batch, \
-            adv_targ, available_actions_batch, _ = sample
+                value_preds_batch, return_batch, masks_batch, active_masks_batch, old_action_log_probs_batch, \
+                adv_targ, available_actions_batch, _ = sample
 
         old_action_log_probs_batch = check(old_action_log_probs_batch).to(**self.tpdv)
         adv_targ = check(adv_targ).to(**self.tpdv)
@@ -117,12 +121,12 @@ class R_MAPPO():
         active_masks_batch = check(active_masks_batch).to(**self.tpdv)
 
         # Reshape to do in a single forward pass for all steps
-        values, action_log_probs, dist_entropy = self.policy.evaluate_actions(share_obs_batch,
-                                                                              obs_batch, 
-                                                                              rnn_states_batch, 
-                                                                              rnn_states_critic_batch, 
-                                                                              actions_batch, 
-                                                                              masks_batch, 
+        values, action_log_probs, dist_entropy = self.policy.evaluate_actions(share_obs_img_batch, share_obs_lin_batch,
+                                                                              obs_image_batch, obs_lin_batch,
+                                                                              rnn_states_batch,
+                                                                              rnn_states_critic_batch,
+                                                                              actions_batch,
+                                                                              masks_batch,
                                                                               available_actions_batch,
                                                                               active_masks_batch)
         # actor update
@@ -185,7 +189,6 @@ class R_MAPPO():
         mean_advantages = np.nanmean(advantages_copy)
         std_advantages = np.nanstd(advantages_copy)
         advantages = (advantages - mean_advantages) / (std_advantages + 1e-5)
-        
 
         train_info = {}
 
@@ -205,7 +208,6 @@ class R_MAPPO():
                 data_generator = buffer.feed_forward_generator(advantages, self.num_mini_batch)
 
             for sample in data_generator:
-
                 value_loss, critic_grad_norm, policy_loss, dist_entropy, actor_grad_norm, imp_weights \
                     = self.ppo_update(sample, update_actor)
 
@@ -220,7 +222,7 @@ class R_MAPPO():
 
         for k in train_info.keys():
             train_info[k] /= num_updates
- 
+
         return train_info
 
     def prep_training(self):

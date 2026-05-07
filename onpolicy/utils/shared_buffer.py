@@ -381,8 +381,10 @@ class SharedReplayBuffer(object):
         rand = torch.randperm(batch_size).numpy()
         sampler = [rand[i * mini_batch_size:(i + 1) * mini_batch_size] for i in range(num_mini_batch)]
 
-        share_obs = self.share_obs[:-1].reshape(-1, *self.share_obs.shape[3:])
-        obs = self.obs[:-1].reshape(-1, *self.obs.shape[3:])
+        share_obs_image = self.share_obs_image[:-1].reshape(-1, *self.share_obs_image.shape[3:])
+        share_obs_linear = self.share_obs_linear[:-1].reshape(-1, *self.share_obs_linear.shape[3:])
+        obs_image = self.obs_image[:-1].reshape(-1, *self.obs_image.shape[3:])
+        obs_linear = self.obs_linear[:-1].reshape(-1, *self.obs_linear.shape[3:])
         rnn_states = self.rnn_states[:-1].reshape(-1, *self.rnn_states.shape[3:])
         rnn_states_critic = self.rnn_states_critic[:-1].reshape(-1, *self.rnn_states_critic.shape[3:])
         actions = self.actions.reshape(-1, self.actions.shape[-1])
@@ -397,8 +399,10 @@ class SharedReplayBuffer(object):
 
         for indices in sampler:
             # obs size [T+1 N M Dim]-->[T N M Dim]-->[T*N*M,Dim]-->[index,Dim]
-            share_obs_batch = share_obs[indices]
-            obs_batch = obs[indices]
+            share_obs_img_batch = share_obs_image[indices]
+            share_obs_lin_batch = share_obs_linear[indices]
+            obs_image_batch = obs_image[indices]
+            obs_lin_batch = obs_linear[indices]
             rnn_states_batch = rnn_states[indices]
             rnn_states_critic_batch = rnn_states_critic[indices]
             actions_batch = actions[indices]
@@ -416,7 +420,7 @@ class SharedReplayBuffer(object):
             else:
                 adv_targ = advantages[indices]
 
-            yield share_obs_batch, obs_batch, rnn_states_batch, rnn_states_critic_batch, actions_batch, \
+            yield share_obs_img_batch, share_obs_lin_batch, obs_image_batch, obs_lin_batch, rnn_states_batch, rnn_states_critic_batch, actions_batch, \
                 value_preds_batch, return_batch, masks_batch, active_masks_batch, old_action_log_probs_batch, \
                 adv_targ, available_actions_batch
 

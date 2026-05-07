@@ -79,7 +79,7 @@ class R_Actor(nn.Module):
 
         return actions, action_log_probs, rnn_states
 
-    def evaluate_actions(self, obs, rnn_states, action, masks, available_actions=None, active_masks=None):
+    def evaluate_actions(self, obs_img, obs_lin, rnn_states, action, masks, available_actions=None, active_masks=None):
         """
         Compute log probability and entropy of given actions.
         :param obs: (torch.Tensor) observation inputs into network.
@@ -93,7 +93,8 @@ class R_Actor(nn.Module):
         :return action_log_probs: (torch.Tensor) log probabilities of the input actions.
         :return dist_entropy: (torch.Tensor) action distribution entropy for the given inputs.
         """
-        obs = check(obs).to(**self.tpdv)
+        obs_img = check(obs_img).to(**self.tpdv)
+        obs_lin = check(obs_lin).to(**self.tpdv)
         rnn_states = check(rnn_states).to(**self.tpdv)
         action = check(action).to(**self.tpdv)
         masks = check(masks).to(**self.tpdv)
@@ -103,7 +104,9 @@ class R_Actor(nn.Module):
         if active_masks is not None:
             active_masks = check(active_masks).to(**self.tpdv)
 
-        actor_features = self.base(obs)
+        actor_features_cnn = self.base_cnn(obs_img)
+        actor_features_lin = self.base_linear(obs_lin)
+        actor_features = torch.cat([actor_features_cnn, actor_features_lin], dim=1)
 
         if self._use_naive_recurrent_policy or self._use_recurrent_policy:
             actor_features, rnn_states = self.rnn(actor_features, rnn_states, masks)

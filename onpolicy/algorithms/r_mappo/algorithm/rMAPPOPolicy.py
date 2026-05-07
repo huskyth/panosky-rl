@@ -74,7 +74,7 @@ class R_MAPPOPolicy:
         values, rnn_states_critic = self.critic(cent_obs_img, cent_obs_linear, rnn_states_critic, masks)
         return values, actions, action_log_probs, rnn_states_actor, rnn_states_critic
 
-    def get_values(self, cent_obs, rnn_states_critic, masks):
+    def get_values(self, cent_obs_img, cent_obs_linear, rnn_states_critic, masks):
         """
         Get value function predictions.
         :param cent_obs (np.ndarray): centralized input to the critic.
@@ -83,10 +83,11 @@ class R_MAPPOPolicy:
 
         :return values: (torch.Tensor) value function predictions.
         """
-        values, _ = self.critic(cent_obs, rnn_states_critic, masks)
+        values, _ = self.critic(cent_obs_img, cent_obs_linear, rnn_states_critic, masks)
         return values
 
-    def evaluate_actions(self, cent_obs, obs, rnn_states_actor, rnn_states_critic, action, masks,
+    def evaluate_actions(self, cent_obs_img, cent_obs_lin, obs_img, obs_lin, rnn_states_actor, rnn_states_critic,
+                         action, masks,
                          available_actions=None, active_masks=None):
         """
         Get action logprobs / entropy and value function predictions for actor update.
@@ -104,14 +105,14 @@ class R_MAPPOPolicy:
         :return action_log_probs: (torch.Tensor) log probabilities of the input actions.
         :return dist_entropy: (torch.Tensor) action distribution entropy for the given inputs.
         """
-        action_log_probs, dist_entropy = self.actor.evaluate_actions(obs,
+        action_log_probs, dist_entropy = self.actor.evaluate_actions(obs_img, obs_lin,
                                                                      rnn_states_actor,
                                                                      action,
                                                                      masks,
                                                                      available_actions,
                                                                      active_masks)
 
-        values, _ = self.critic(cent_obs, rnn_states_critic, masks)
+        values, _ = self.critic(cent_obs_img, cent_obs_lin, rnn_states_critic, masks)
         return values, action_log_probs, dist_entropy
 
     def act(self, obs, rnn_states_actor, masks, available_actions=None, deterministic=False):
