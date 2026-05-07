@@ -31,17 +31,24 @@ class MPERunner(Runner):
 
     def warmup(self):
         # reset env
-        obs = self.eval_envs.reset()
+        obs_img, obs_linear = self.eval_envs.reset()
 
         # replay buffer
         if self.use_centralized_V:
-            share_obs = obs.reshape(self.n_rollout_threads, -1)
-            share_obs = np.expand_dims(share_obs, 1).repeat(self.num_agents, axis=1)
+            share_obs_linear = obs_linear.reshape(self.n_rollout_threads, -1)
+            share_obs_linear = np.expand_dims(share_obs_linear, 1).repeat(self.num_agents, axis=1)
+
+            share_obs_img = obs_img.reshape(self.n_rollout_threads, -1)
+            share_obs_img = np.expand_dims(share_obs_img, 1).repeat(self.num_agents, axis=1)
+            share_obs_img = share_obs_img.reshape(
+                *share_obs_img.shape[:-1], *self.buffer.share_obs_shape_image)
+
+            self.buffer.share_obs_linear[0] = share_obs_linear.copy()
+            self.buffer.share_obs_image[0] = share_obs_img.copy()
+            self.buffer.obs_linear[0] = obs_linear.copy()
+            self.buffer.obs_image[0] = obs_img.copy()
         else:
             share_obs = obs
-
-        self.buffer.share_obs[0] = share_obs.copy()
-        self.buffer.obs[0] = obs.copy()
 
     def insert(self, data):
         obs, rewards, dones, infos, values, actions, action_log_probs, rnn_states, rnn_states_critic = data
@@ -65,14 +72,15 @@ class MPERunner(Runner):
     @torch.no_grad()
     def eval(self, total_num_steps):
         eval_episode_rewards = []
-        eval_obs = self.eval_envs.reset()
+        eval_obs_img, eval_obs_lin = self.eval_envs.reset()
 
         eval_rnn_states = np.zeros((self.n_eval_rollout_threads, *self.buffer.rnn_states.shape[2:]), dtype=np.float32)
         eval_masks = np.ones((self.n_eval_rollout_threads, self.num_agents, 1), dtype=np.float32)
 
         for eval_step in range(self.episode_length):
             self.trainer.prep_rollout()
-            eval_action, eval_rnn_states = self.trainer.policy.act(np.concatenate(eval_obs),
+            eval_action, eval_rnn_states = self.trainer.policy.act(np.concatenate(eval_obs_img),
+                                                                   np.concatenate(eval_obs_lin),
                                                                    np.concatenate(eval_rnn_states),
                                                                    np.concatenate(eval_masks),
                                                                    deterministic=True)
@@ -92,7 +100,7 @@ class MPERunner(Runner):
                 raise NotImplementedError
 
             # Obser reward and next obs
-            eval_obs, eval_rewards, eval_dones, eval_infos = self.eval_envs.step(eval_actions_env)
+            eval_obs_img, eval_obs_lin, eval_rewards, eval_dones, eval_infos = self.eval_envs.step(eval_actions_env)
             eval_episode_rewards.append(eval_rewards)
 
             eval_rnn_states[eval_dones == True] = np.zeros(

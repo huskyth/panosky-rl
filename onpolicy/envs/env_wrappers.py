@@ -7,6 +7,7 @@ from multiprocessing import Process, Pipe
 from abc import ABC, abstractmethod
 from onpolicy.utils.util import tile_images
 
+
 class CloudpickleWrapper(object):
     """
     Uses cloudpickle to serialize contents (otherwise multiprocessing tries to use pickle)
@@ -282,7 +283,6 @@ class SubprocVecEnv(ShareVecEnv):
 
         return np.stack(imag_obs), np.stack(lin_obs)
 
-
     def reset_task(self):
         for remote in self.remotes:
             remote.send(('reset_task', None))
@@ -303,9 +303,9 @@ class SubprocVecEnv(ShareVecEnv):
     def render(self, mode="rgb_array"):
         for remote in self.remotes:
             remote.send(('render', mode))
-        if mode == "rgb_array":   
+        if mode == "rgb_array":
             frame = [remote.recv() for remote in self.remotes]
-            return np.stack(frame) 
+            return np.stack(frame)
 
 
 def shareworker(remote, parent_remote, env_fn_wrapper):
@@ -479,7 +479,7 @@ class ChooseSimpleSubprocVecEnv(ShareVecEnv):
     def render(self, mode="rgb_array"):
         for remote in self.remotes:
             remote.send(('render', mode))
-        if mode == "rgb_array":   
+        if mode == "rgb_array":
             frame = [remote.recv() for remote in self.remotes]
             return np.stack(frame)
 
@@ -672,6 +672,8 @@ class ChooseGuardSubprocVecEnv(ShareVecEnv):
 class DummyVecEnv(ShareVecEnv):
     def __init__(self, env_fns):
         self.envs = [fn() for fn in env_fns]
+        assert len(self.envs) == 1
+        assert self.envs[0].n_total_uavs == 1
         env = self.envs[0]
         ShareVecEnv.__init__(self, len(
             env_fns), env.observation_space, env.share_observation_space, env.action_space)
@@ -682,7 +684,12 @@ class DummyVecEnv(ShareVecEnv):
 
     def step_wait(self):
         results = [env.step(a) for (a, env) in zip(self.actions, self.envs)]
-        obs, rews, dones, infos = map(np.array, zip(*results))
+        obs, rews, dones, infos = zip(*results)
+        rews = np.array(rews)
+        dones = np.array(dones)
+        infos = np.array(infos)
+        lin = np.array([[x[0] for x in obs[0]]])
+        img = np.array([[x[1] for x in obs[0]]])
 
         for (i, done) in enumerate(dones):
             if 'bool' in done.__class__.__name__:
@@ -690,14 +697,16 @@ class DummyVecEnv(ShareVecEnv):
                     obs[i] = self.envs[i].reset()
             else:
                 if np.all(done):
-                    obs[i] = self.envs[i].reset()
+                    lin[i], img[i] = self.envs[i].reset()[0]
 
         self.actions = None
-        return obs, rews, dones, infos
+        return img, lin, rews, dones, infos
 
     def reset(self):
         obs = [env.reset() for env in self.envs]
-        return np.array(obs)
+        lin = [x[0] for x in obs[0]]
+        img = [x[1] for x in obs[0]]
+        return np.array([img]), np.array([lin])
 
     def close(self):
         for env in self.envs:
@@ -711,7 +720,6 @@ class DummyVecEnv(ShareVecEnv):
                 env.render(mode=mode)
         else:
             raise NotImplementedError
-
 
 
 class ShareDummyVecEnv(ShareVecEnv):
@@ -749,7 +757,7 @@ class ShareDummyVecEnv(ShareVecEnv):
     def close(self):
         for env in self.envs:
             env.close()
-    
+
     def render(self, mode="human"):
         if mode == "rgb_array":
             return np.array([env.render(mode=mode) for env in self.envs])
@@ -797,6 +805,7 @@ class ChooseDummyVecEnv(ShareVecEnv):
         else:
             raise NotImplementedError
 
+
 class ChooseSimpleDummyVecEnv(ShareVecEnv):
     def __init__(self, env_fns):
         self.envs = [fn() for fn in env_fns]
@@ -816,7 +825,7 @@ class ChooseSimpleDummyVecEnv(ShareVecEnv):
 
     def reset(self, reset_choose):
         obs = [env.reset(choose)
-                   for (env, choose) in zip(self.envs, reset_choose)]
+               for (env, choose) in zip(self.envs, reset_choose)]
         return np.array(obs)
 
     def close(self):
