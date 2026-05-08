@@ -1,3 +1,4 @@
+import inspect
 import logging
 from pathlib import Path
 import os
@@ -5,6 +6,29 @@ import os
 cur = Path(__file__).parent.parent
 if not os.path.exists(cur / "logs"):
     os.makedirs(cur / "logs")
+
+FILTER_FILE = ['actions.py']
+
+
+def filter_log_by_file(func):
+    def wrapper(self, msg, *args, **kwargs):
+        # 获取真实调用文件（跳过调试器 + logger自身）
+        frame = inspect.currentframe()
+        while frame:
+            fname = os.path.basename(frame.f_code.co_filename)
+            # 跳过调试器 & 日志文件本身
+            if "pydevd" not in fname and fname != os.path.basename(__file__):
+                break
+            frame = frame.f_back
+
+        # 如果在过滤列表里，直接返回，不打日志
+        if frame and os.path.basename(frame.f_code.co_filename) in FILTER_FILE:
+            return
+
+        # 否则执行原来的日志逻辑
+        return func(self, msg, *args, **kwargs)
+
+    return wrapper
 
 
 def singleton(cls):
@@ -43,31 +67,41 @@ class AppLogger:
         self.logger.addHandler(file_handler)
 
     # -------------- 安全增强版，绝对不传递 mute 给原生 logger --------------
+    @filter_log_by_file
     def info(self, msg, *args, **kwargs):
+        if 'is_in_file' in kwargs:
+            kwargs.pop('is_in_file')
         # 自动提取 mute，不传给底层
         mute = kwargs.pop("mute", False)
+        for ag in args:
+            msg += ' ' + str(ag)
+        args = []
         if not mute:
-            self.logger.info(msg, *args, **kwargs)
+            self.logger.info(msg, *args, stacklevel=3, **kwargs)
 
+    @filter_log_by_file
     def debug(self, msg, *args, **kwargs):
         mute = kwargs.pop("mute", False)
         if not mute:
-            self.logger.debug(msg, *args, **kwargs)
+            self.logger.debug(msg, *args, stacklevel=3, **kwargs)
 
+    @filter_log_by_file
     def warning(self, msg, *args, **kwargs):
         mute = kwargs.pop("mute", False)
         if not mute:
-            self.logger.warning(msg, *args, **kwargs)
+            self.logger.warning(msg, *args, stacklevel=3, **kwargs)
 
+    @filter_log_by_file
     def error(self, msg, *args, **kwargs):
         mute = kwargs.pop("mute", False)
         if not mute:
-            self.logger.error(msg, *args, **kwargs)
+            self.logger.error(msg, *args, stacklevel=3, **kwargs)
 
+    @filter_log_by_file
     def critical(self, msg, *args, **kwargs):
         mute = kwargs.pop("mute", False)
         if not mute:
-            self.logger.critical(msg, *args, **kwargs)
+            self.logger.critical(msg, *args, stacklevel=3, **kwargs)
 
     # --------------------------------------------------------------------
     def get_logger(self):

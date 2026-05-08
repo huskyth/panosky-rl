@@ -151,7 +151,7 @@ class MultiUavEnv:
         # train为训练模式，test为测试模式
         self.mode = mode
         self.is_debug = is_debug
-        self.is_use_weapon = False
+        self.is_use_weapon = True
 
         self.right_vector = None
 
@@ -448,8 +448,6 @@ class MultiUavEnv:
         current_p = self.raw_uavs
 
         if self.is_use_weapon:
-            if self.n_total_uavs != 2:
-                raise Exception("无人机机数量不等于2")
 
             current_distance_to_target = compute_distance(current_p[1].position, self.target)
             if current_p[0].is_attacked_state in [AttackState.DESTROYED, AttackState.ATTACKING] and current_p[
