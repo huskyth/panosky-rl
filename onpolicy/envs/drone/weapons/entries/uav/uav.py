@@ -15,9 +15,9 @@ class UAV(AbstractEntry):
         # velocity指速度大小
         self.velocity = self.config.velocity
         self.velocity_direction = normalize(self.config.velocity_direction)
-        self.is_exist_mountain = False
         self.type = UAVType.TASK
         self.state = UAVState.ALIVE
+        self.is_re_alive_because_mountain = False
 
     def set_uav_type(self, uav_type):
         self.type = uav_type
@@ -58,9 +58,6 @@ class UAV(AbstractEntry):
         cur_position_vector = self._cur_position_vector()
         self.position = matrix_mul_vector(translate_matrix, cur_position_vector)[:-1]
 
-    def set_mountain_exist_bool(self, is_exist_mountain):
-        self.is_exist_mountain = is_exist_mountain
-
     def get_position(self):
         return self.position
 
@@ -90,7 +87,3 @@ class UAV(AbstractEntry):
         '''
         from onpolicy.utils.math_tool import scalar_mul_vector
         return scalar_mul_vector(self.velocity, self.velocity_direction)
-
-
-if __name__ == '__main__':
-    pass

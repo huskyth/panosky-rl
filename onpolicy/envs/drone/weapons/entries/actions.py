@@ -313,14 +313,14 @@ class BulletAttackAction(AbstractAction):
         super().__init__()
 
     @staticmethod
-    def execute():
+    def execute(mmap):
         will_deleted_fired_bullet_list = []
         if GameManager.track_rader.try_get_current_target() is None:
             return
         for idx, a_bullet in enumerate(GameManager.weapon.fired_bullet_list):
             # 列表中的子弹代表发射出去的，默认都有跟踪目标
             bullet_state = a_bullet.step_attack_a_target_and_is_kill(
-                GameManager.uav_list, GameManager.get_uav_index)
+                GameManager.uav_list, GameManager.get_uav_index, mmap)
             if bullet_state == GameManager.weapon.BulletState.KILLED_NO_USE:
                 GameManager.track_rader.remove_target()
                 GameManager.weapon.reset_fire_instruction()

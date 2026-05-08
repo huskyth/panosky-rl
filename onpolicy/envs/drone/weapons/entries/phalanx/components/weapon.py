@@ -130,33 +130,37 @@ class Bullet(AbstractEntry):
         """
         return 0
 
-    def step_attack_a_target_and_is_kill(self, uav_list, fun):
+    def step_attack_a_target_and_is_kill(self, uav_list, fun, mmap):
         logger.info("id为：" + self.get_id() + "的子弹还需要飞行的时间：" + str(self.all_time_to_fly))
-        logger.info(f"打击的时候的位置 {self.target.position}")
-        if self.all_time_to_fly <= UNIT_TIME:
-            # 时间到了，进行毁伤计算
-            is_hit_and_kill = self.is_hit_kill_by_mc()
-            logger.info(
-                "id为：" + self.get_id() + "的子弹" + "它的无人机为：" + self.target.get_id() + ", 参数为" + str(
-                    self.hit_kill_probability) + "，蒙特卡洛是否被 命中和毁伤 ：" + str(is_hit_and_kill))
-            # 命中
-            if is_hit_and_kill:
+        logger.info(f"打击的时候的位置 {self.target.position}, 这里被打击的飞机ID {id(self.target)}")
+        # 时间到了，进行毁伤计算
+        is_hit_and_kill = self.is_hit_kill_by_mc()
+        is_collision = mmap.judge_mountain(*self.position, *self.target.position, coll_safe_dis=0, judge_type='block')
+        logger.info(
+            "id为：" + self.get_id() + "的子弹" + "它的无人机为：" + self.target.get_id() + ", 参数为" + str(
+                self.hit_kill_probability) + "，蒙特卡洛是否被 命中和毁伤 ：" + str(is_hit_and_kill))
+        # 命中
+        if is_hit_and_kill:
+            if not is_collision:
                 # 被毁伤，移除自己
                 self.target.set_attacked_state(AttackState.DESTROYED)
                 logger.info(
                     "id为" + fun(self.target) + "的无人机被摧毁,当前随机数n为" + str(GameConfig.RANDOM_N),
+                    f"当前无人机列表ID {[id(x) for x in uav_list]}",
                     is_in_file=False)
                 self.target.remove_self_from_list(uav_list)
+                logger.info(f"移除后无人机列表ID {[id(x) for x in uav_list]}， {uav_list}")
                 return Weapon.BulletState.KILLED_NO_USE
             else:
+                logger.info(f"此处会获得奖励，因为被遮挡而没有被杀死 {*self.position, *self.target.position}")
                 self.target.set_attacked_state(AttackState.SAFE)
-                # 子弹失效
+                self.target.is_re_alive_because_mountain = True
+                # 此处设置过奖励后重置哦
                 return Weapon.BulletState.NO_KILLED_NO_USE
         else:
-            logger.info("id为：" + self.get_id() + "的子弹飞行中")
-            # 正在飞行中
-            self.all_time_to_fly -= UNIT_TIME
-            return Weapon.BulletState.FLYING_USEING
+            self.target.set_attacked_state(AttackState.SAFE)
+            # 子弹失效
+            return Weapon.BulletState.NO_KILLED_NO_USE
 
     def is_hit_kill_by_mc(self):
         is_hit = single_probability_event(self.hit_kill_probability)
