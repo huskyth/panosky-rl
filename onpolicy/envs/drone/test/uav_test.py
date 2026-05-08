@@ -24,4 +24,4 @@ import numpy as np
 
 env.reset()
 while not env.is_terminal[0]:
-    env.step(np.array([[0., 0., 0., 0., 1., 0., 0., 0., 0.]]))
+    env.step(np.array([[0., 0., 0., 0., 1., 0., 0., 0., 0.], [0., 0., 0., 0., 1., 0., 0., 0., 0.]]))

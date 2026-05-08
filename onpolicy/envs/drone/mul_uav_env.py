@@ -7,10 +7,7 @@ import warnings
 import os
 import numpy as np
 from gym import spaces
-import torch
-import torchvision.models as models
 from onpolicy.utils.format_logger import AppLogger
-
 from onpolicy.envs.drone.weapons.entries.uav.uav_enum import UAVState, AttackState
 from onpolicy.envs.drone.maps.map import Map
 from onpolicy.utils.util import compute_distance
@@ -134,13 +131,13 @@ class MultiUavEnv:
         self.share_observation_space = [
             spaces.Dict({
                 # 1) 线性数据：一维连续向量（Box）
-                "linear": spaces.Box(low=-np.inf, high=+np.inf, shape=(obs_dim,), dtype=np.float32),
+                "linear": spaces.Box(low=-np.inf, high=+np.inf, shape=(self.n_total_uavs * obs_dim,), dtype=np.float32),
 
                 # 2) 图像数据：高/宽/通道（最常用格式 HWC）
                 "image": spaces.Box(
                     low=0,  # 像素 0~255
                     high=255,
-                    shape=(1, 32, 32),  # 高84 × 宽84 × 3通道(RGB)
+                    shape=(self.n_total_uavs, 32, 32),  # 高84 × 宽84 × 3通道(RGB)
                     dtype=np.uint8
                 )
             })
@@ -328,23 +325,33 @@ class MultiUavEnv:
         return [self.get_observation_of_a_uav(i) for i in range(self.n_total_uavs)]
 
     def get_observation_of_a_uav(self, uav_id):
-
+        assert self.is_use_weapon is True
+        assert self.n_total_uavs == 2
         normal_ = np.array([self.map.map_max_x, self.map.map_max_y, self.max_available_height])
         # 友军的位置和速度、受攻击状态
         # TODO://待检查，友军和武器有关，观测半径可以后续再加
-
-        # 本机位置和速度
-        temp_uav = self.raw_uavs[uav_id]
-        position = temp_uav.get_normalize_position(normal_)
-        velocity = temp_uav.get_normalize_velocity()
-        right_vector = normalize(self.right_vector[uav_id])
-
+        position = self.raw_uavs[uav_id].position
         map_obs = self.map.generate_img(position[0], position[1])[0][0]
 
+        team = []
+        for i in range(self.n_total_uavs):
+            # 本机位置和速度
+            temp_uav = self.raw_uavs[i]
+            position = temp_uav.get_normalize_position(normal_)
+            velocity = temp_uav.get_normalize_velocity()
+            right_vector = normalize(self.right_vector[i])
+            team += position
+            team += velocity
+            team += right_vector
+            team += [temp_uav.is_attacked_state.value]
+            team += [1 if i == 0 else 0]
+
+        team += [uav_id]
         weapon = (np.array(self.weapon) / normal_).tolist()
         target = (np.array(self.target) / normal_).tolist()
-
-        return position + velocity + right_vector + weapon + target, [map_obs]
+        team += weapon
+        team += target
+        return team, [map_obs]
 
     def step(self, action):
         # 输入动作先转换为两个离散动作
@@ -448,9 +455,24 @@ class MultiUavEnv:
         current_p = self.raw_uavs
 
         if self.is_use_weapon:
-            self.reward = [0]
-            current_distance_to_target = compute_distance(current_p[0].position, self.target)
-            if current_p[0].status == UAVState.ALIVE and current_distance_to_target <= self.task_success_radius:
+            self.reward = [0 for _ in range(self.n_total_uavs)]
+            assert self.n_total_uavs == 2
+
+            current_distance_to_target_1 = compute_distance(current_p[1].position, self.target)
+
+            if current_p[1].status != UAVState.ALIVE:
+                self.reward = [0 for _ in range(self.n_total_uavs)]
+                msg = f'任务机败亡-任务机1状态为：{current_p[1].status.value}'
+                msg += f'-奖励-{self.reward}'
+                self.n_episode = self.n_episode + 1
+                self.is_terminal = [True for _ in range(self.n_total_uavs)]
+                logger.info(
+                    f"PID-{os.getpid()}, mode-{self.mode}, episode-{self.n_episode}\033[31m[terminated]：{msg}\033[0m")
+                self.dump(msg)
+                return
+
+            if current_p[0].is_attacked_state in [AttackState.ATTACKING,
+                                                  AttackState.DESTROYED] and current_distance_to_target_1 <= self.task_success_radius:
                 self.is_terminal = [True for _ in range(self.n_total_uavs)]
                 self.reward = [self.task_success_reward for _ in range(self.n_total_uavs)]
                 logger.info(
@@ -460,16 +482,7 @@ class MultiUavEnv:
                 self.n_episode = self.n_episode + 1
                 return
 
-            if current_p[0].status != UAVState.ALIVE:
-                self.reward = [0 for _ in range(self.n_total_uavs)]
-                msg = f'无任务机存活-任务机1状态为：{current_p[0].status.value}'
-                msg += f'-奖励-{self.reward}'
-                self.n_episode = self.n_episode + 1
-                self.is_terminal = [True for _ in range(self.n_total_uavs)]
-                logger.info(
-                    f"PID-{os.getpid()}, mode-{self.mode}, episode-{self.n_episode}\033[31m[terminated]：{msg}\033[0m")
-                self.dump(msg)
-                return
+
 
         else:
             assert self.n_total_uavs == 1
@@ -497,7 +510,7 @@ class MultiUavEnv:
                 return
 
         if self._episode_steps >= self.max_episode_steps:
-            self.reward = [0]
+            self.reward = [0 for _ in range(self.n_total_uavs)]
             msg = f'{self._episode_steps} step：超出最大步数限制'
             msg += f'-奖励-{self.reward}'
             self.n_episode = self.n_episode + 1
@@ -544,7 +557,7 @@ class MultiUavEnv:
         (N * 8 + 8 + 3 + 3)
         """
         if self.is_use_weapon:
-            return self.n_total_uavs * 8 + 8 + 6
+            return self.n_total_uavs * 11 + 7
         else:
             return 3 + 3 + 3 + 3 + 3
 
