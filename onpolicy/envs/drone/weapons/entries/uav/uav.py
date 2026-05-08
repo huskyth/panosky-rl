@@ -72,9 +72,11 @@ class UAV(AbstractEntry):
         self.velocity_direction = normalize(velocity.copy())
 
     def get_mountain_exist_bool(self, is_in_search_range):
-        if is_in_search_range:
-            logger.info("飞机ID为：" + self.get_id() + "的飞机，是否被遮挡：" + str(self.is_exist_mountain))
-        return self.is_exist_mountain
+        """
+            :param is_in_search_range:
+            这里一律返回False，消除影响
+        """
+        return False
 
     def print_self(self):
         return 'id为：' + self.get_id() + ", 被标记次数为：" + str(self.search_marked_times) + "  "

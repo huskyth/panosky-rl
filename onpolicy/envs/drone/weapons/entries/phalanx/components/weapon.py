@@ -48,7 +48,8 @@ class Weapon(AbstractEntry):
         fire_number = int(min(fire_number, self.current_bullet_num))
         self._fire_some_bullet(fire_number, target)
         self.current_bullet_num -= fire_number
-        logger.info(str(os.getpid()) + "发射了" + str(fire_number) + "枚子弹，还剩下" + str(self.current_bullet_num) + "枚子弹")
+        logger.info(
+            str(os.getpid()) + "发射了" + str(fire_number) + "枚子弹，还剩下" + str(self.current_bullet_num) + "枚子弹")
 
     def step_time_instruction(self):
         self.time_instruction += UNIT_TIME
@@ -71,7 +72,7 @@ class Weapon(AbstractEntry):
 
     def is_bullet_can_fire(self):
         logger.info(str(os.getpid()) + "判断子弹有多少的时候的弹量为{}".format(self.current_bullet_num),
-            is_in_file=False)
+                    is_in_file=False)
         return self.current_bullet_num > 0
 
     def step_load_bullet(self):
@@ -120,13 +121,18 @@ class Bullet(AbstractEntry):
         self.fired_bullet_list = fired_bullet_list
         self.all_time_to_fly = self._calculate_all_time_of_fly()
         self.target.set_attacked_state(AttackState.ATTACKING)
+        logger.info(f"初始化的时候飞机位置 {target.position}")
 
     def _calculate_all_time_of_fly(self):
-        distance = distance_of_2_point(self.target.position, self.position)
-        return distance / self.velocity
+        """
+            :return: 子弹飞行时间
+            这里一律返回0，就是忽略子弹飞行时间
+        """
+        return 0
 
     def step_attack_a_target_and_is_kill(self, uav_list, fun):
         logger.info("id为：" + self.get_id() + "的子弹还需要飞行的时间：" + str(self.all_time_to_fly))
+        logger.info(f"打击的时候的位置 {self.target.position}")
         if self.all_time_to_fly <= UNIT_TIME:
             # 时间到了，进行毁伤计算
             is_hit_and_kill = self.is_hit_kill_by_mc()
@@ -155,19 +161,3 @@ class Bullet(AbstractEntry):
     def is_hit_kill_by_mc(self):
         is_hit = single_probability_event(self.hit_kill_probability)
         return is_hit
-
-
-if __name__ == '__main__':
-    from onpolicy.envs.drone.weapons.factory.uav_factory import UAVFactory
-
-    hit_probability = 0.1
-    kill_probability = 0.5
-    b = Bullet(None, target=UAVFactory.create(), position=[1, 1, 1], velocity=1,
-               hit_probability=hit_probability,
-               kill_probability=kill_probability,
-               fired_bullet_list=[])
-    yes = 0
-    for x in range(100):
-        yes += 1 if b.is_hit_by_mc() else 0
-
-    print('success rate: ' + str(yes / 100))
