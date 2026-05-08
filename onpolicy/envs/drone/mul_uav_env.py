@@ -459,10 +459,11 @@ class MultiUavEnv:
             assert self.n_total_uavs == 2
 
             current_distance_to_target_1 = compute_distance(current_p[1].position, self.target)
+            current_distance_to_target_0 = compute_distance(current_p[0].position, self.target)
 
-            if current_p[1].status != UAVState.ALIVE:
+            if current_p[0].status != UAVState.ALIVE and current_p[1].status != UAVState.ALIVE:
                 self.reward = [0 for _ in range(self.n_total_uavs)]
-                msg = f'任务机败亡-任务机1状态为：{current_p[1].status.value}'
+                msg = f'任务机败亡-任务机状态为：{current_p[0].status.value, current_p[1].status.value}'
                 msg += f'-奖励-{self.reward}'
                 self.n_episode = self.n_episode + 1
                 self.is_terminal = [True for _ in range(self.n_total_uavs)]
@@ -471,13 +472,12 @@ class MultiUavEnv:
                 self.dump(msg)
                 return
 
-            if current_p[0].is_attacked_state in [AttackState.ATTACKING,
-                                                  AttackState.DESTROYED] and current_distance_to_target_1 <= self.task_success_radius:
+            if current_distance_to_target_1 <= self.task_success_radius or current_distance_to_target_0 <= self.task_success_radius:
                 self.is_terminal = [True for _ in range(self.n_total_uavs)]
                 self.reward = [self.task_success_reward for _ in range(self.n_total_uavs)]
                 logger.info(
                     f"PID-{os.getpid()}, mode-{self.mode}, episode-{self.n_episode}, \033[32m[terminated]："
-                    f"任务完成-UAV索引-【1】\033[0m，受攻击状态为 {current_p[0].is_attacked_state}")
+                    f"任务完成-UAV索引\033[0m，受攻击状态为 {current_p[0].is_attacked_state, current_p[1].is_attacked_state}")
                 self.dump("任务完成")
                 self.n_episode = self.n_episode + 1
                 return
