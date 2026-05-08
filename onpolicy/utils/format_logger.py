@@ -7,11 +7,11 @@ cur = Path(__file__).parent.parent
 if not os.path.exists(cur / "logs"):
     os.makedirs(cur / "logs")
 
-filted = False
+filted = True
 
 if filted:
-    FILTER_FILE = ['actions.py', 'search_rader.py', 'track_rader.py', 'weapon.py', 'abstract_entry.py',
-                   'track_rader_state.py', 'uav.py']
+    FILTER_FILE = ['actions.py', 'search_rader.py', 'track_rader.py', 'abstract_entry.py',
+                   'track_rader_state.py', 'uav.py', 'game.py']
 else:
     FILTER_FILE = []
 

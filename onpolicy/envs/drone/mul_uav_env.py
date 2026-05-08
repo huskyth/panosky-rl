@@ -394,19 +394,25 @@ class MultiUavEnv:
             position = [self.raw_uavs[u].position for u in range(self.n_total_uavs)]
             velocity = [self.raw_uavs[u].velocity for u in range(self.n_total_uavs)]
             game_uav_list = EnvironmentInterface.step(position, velocity, self.map)
+            self.is_alive_by_mountain = [False for _ in range(self.n_total_uavs)]
             for u in range(self.n_total_uavs):
                 if game_uav_list[u] is None:
                     self.raw_uavs[u].is_attacked_state = AttackState.DESTROYED
                     self.raw_uavs[u].status = UAVState.DESTROYED
                 else:
                     self.raw_uavs[u].is_attacked_state = game_uav_list[u].get_attacked_state()
+                    self.is_alive_by_mountain[u] = game_uav_list[u].is_re_alive_because_mountain
+                    if game_uav_list[u].is_re_alive_because_mountain:
+                        game_uav_list[u].is_re_alive_because_mountain = False
+                        logger.info(f"ID {id(game_uav_list[u])} 重制is_re_alive_because_mountain")
                 if self.raw_uavs[u].is_attacked_state == AttackState.DESTROYED:
                     self.raw_uavs[u].status = UAVState.DESTROYED
+
         data_save = {"uva_state": [x.to_dict() for x in self.raw_uavs], "uva_actions": action.tolist(),
                      "_episode_steps": self._episode_steps}
         self.episode_data.append(data_save)
         # 计算奖励值和终止符号
-        self.set_reward(last_state)
+        self.set_reward(last_state, self.is_alive_by_mountain)
         ret_reward = [[x] for x in self.reward]
         return self.get_state_of_all_uav(), ret_reward, self.is_terminal, [self.raw_uavs[i].status.value for i in
                                                                            range(self.n_total_uavs)]
@@ -435,7 +441,7 @@ class MultiUavEnv:
                 or next_z < self.min_available_height or next_z > self.max_available_height):
             self.raw_uavs[current_uav_idx].status = UAVState.GROUND_COLLISION
 
-    def set_reward(self, last_p):
+    def set_reward(self, last_p, is_alive_by_mountain):
         # TODO://待检查
         """
         终止条件：
@@ -521,6 +527,10 @@ class MultiUavEnv:
                 f"{msg}\033[0m，距离为{compute_distance(self.target, current_p[0].position)}")
             self.dump(msg)
             return
+
+        for i in range(self.n_total_uavs):
+            if is_alive_by_mountain[i]:
+                self.reward[i] += 0.1
 
     def compute_init_velocity(self):
         # 保持设定速率不变
