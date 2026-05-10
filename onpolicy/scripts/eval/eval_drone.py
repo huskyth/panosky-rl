@@ -129,7 +129,7 @@ def main(args):
     eval_envs = make_eval_env(all_args)
     num_agents = all_args.num_agents
     all_args.n_rollout_threads = 1
-    all_args.model_dir = r'C:\Users\qq162\Desktop\PanoSky-RL\onpolicy\scripts\train\swanlog\run-20260507_193810-odzcanf11s7i8p6sxebf6'
+    all_args.model_dir = r'C:\Users\qq162\Desktop\PanoSky-RL\onpolicy\scripts\train\swanlog\run-20260510_170021-el655m2qfxi659alupja0'
     config = {
         "all_args": all_args,
         "eval_envs": eval_envs,

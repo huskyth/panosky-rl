@@ -7,4 +7,4 @@ def uav_env(args, mode, rank):
     config_path = Path(__file__).parent / f'config/{args.ini_name}'
     cf = configparser.ConfigParser()
     cf.read(str(config_path), encoding="utf-8")
-    return MultiUavEnv(rank, mode, cf, 500)
+    return MultiUavEnv(rank, mode, cf, 500, is_debug=mode == 'eval')

@@ -17,7 +17,7 @@ class UAV(AbstractEntry):
         self.velocity_direction = normalize(self.config.velocity_direction)
         self.type = UAVType.TASK
         self.state = UAVState.ALIVE
-        self.is_re_alive_because_mountain = False
+
 
     def set_uav_type(self, uav_type):
         self.type = uav_type

@@ -187,7 +187,6 @@ class MultiUavEnv:
         训练环境随机生成武器、目标和无人机集群的初始位置
         测试环境需要中通过传参控制武器、目标和无人机集群的初始位置
         """
-        self.is_alive_by_mountain = [False for _ in range(self.n_total_uavs)]
         self.target = [0, 0, 0]
         self.weapon = [0, 0, 0]
         self.raw_uavs = []
@@ -342,7 +341,6 @@ class MultiUavEnv:
         team += position
         team += velocity
         team += right_vector
-        team += [1 if self.is_alive_by_mountain[uav_id] is True else 0]
 
         for i in range(self.n_total_uavs):
             if i == uav_id:
@@ -355,7 +353,6 @@ class MultiUavEnv:
             team += position
             team += velocity
             team += right_vector
-            team += [1 if self.is_alive_by_mountain[i] is True else 0]
 
         weapon = (np.array(self.weapon) / normal_).tolist()
         target = (np.array(self.target) / normal_).tolist()
@@ -404,19 +401,13 @@ class MultiUavEnv:
             position = [self.raw_uavs[u].position for u in range(self.n_total_uavs)]
             velocity = [self.raw_uavs[u].velocity for u in range(self.n_total_uavs)]
             game_uav_list = EnvironmentInterface.step(position, velocity, self.map)
-            self.is_alive_by_mountain = [False for _ in range(self.n_total_uavs)]
             for u in range(self.n_total_uavs):
                 if game_uav_list[u] is None:
                     self.raw_uavs[u].is_attacked_state = AttackState.DESTROYED
                     self.raw_uavs[u].status = UAVState.DESTROYED
                 else:
                     self.raw_uavs[u].is_attacked_state = game_uav_list[u].get_attacked_state()
-                    if self.raw_uavs[u].status == UAVState.ALIVE and game_uav_list[
-                        u].is_re_alive_because_mountain is True:
-                        self.is_alive_by_mountain[u] = True
-                        game_uav_list[u].is_re_alive_because_mountain = False
-                        logger.info(
-                            f"ID {id(game_uav_list[u])} 重制is_re_alive_because_mountain，当前无人机状态 {self.raw_uavs[u].status, self.raw_uavs[u].position}")
+
                 if self.raw_uavs[u].is_attacked_state == AttackState.DESTROYED:
                     self.raw_uavs[u].status = UAVState.DESTROYED
 
@@ -424,7 +415,7 @@ class MultiUavEnv:
                      "_episode_steps": self._episode_steps}
         self.episode_data.append(data_save)
         # 计算奖励值和终止符号
-        self.set_reward(last_state, self.is_alive_by_mountain)
+        self.set_reward(last_state)
         ret_reward = [[x] for x in self.reward]
         return self.get_state_of_all_uav(), ret_reward, self.is_terminal, [self.raw_uavs[i].status.value for i in
                                                                            range(self.n_total_uavs)]
@@ -453,7 +444,7 @@ class MultiUavEnv:
                 or next_z < self.min_available_height or next_z > self.max_available_height):
             self.raw_uavs[current_uav_idx].status = UAVState.GROUND_COLLISION
 
-    def set_reward(self, last_p, is_alive_by_mountain):
+    def set_reward(self, last_p):
         # TODO://待检查
         """
         终止条件：
@@ -492,7 +483,10 @@ class MultiUavEnv:
                 self.dump(msg)
                 return
 
-            if current_distance_to_target_1 <= self.task_success_radius or current_distance_to_target_0 <= self.task_success_radius:
+            if current_distance_to_target_1 <= self.task_success_radius and current_p[
+                0].status == UAVState.DESTROYED or current_distance_to_target_0 <= self.task_success_radius and \
+                    current_p[
+                        1].status == UAVState.DESTROYED:
                 self.is_terminal = [True for _ in range(self.n_total_uavs)]
                 self.reward = [self.task_success_reward for _ in range(self.n_total_uavs)]
                 logger.info(
@@ -502,10 +496,8 @@ class MultiUavEnv:
                 self.n_episode = self.n_episode + 1
                 return
 
-            if is_alive_by_mountain[0] and current_distance_to_target_1 < last_distance_to_target_1 or \
-                    is_alive_by_mountain[1] and current_distance_to_target_0 < last_distance_to_target_0:
-                self.reward = [0.1 for _ in self.n_total_uavs]
-                logger.info(f"有了点稠密奖励")
+
+
 
         else:
             assert self.n_total_uavs == 1

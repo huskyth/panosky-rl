@@ -11,7 +11,7 @@ filted = True
 
 if filted:
     FILTER_FILE = ['actions.py', 'search_rader.py', 'track_rader.py', 'abstract_entry.py',
-                   'track_rader_state.py', 'uav.py', 'game.py']
+                   'track_rader_state.py', 'uav.py', 'game.py','weapon.py']
 else:
     FILTER_FILE = []
 
