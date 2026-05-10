@@ -187,7 +187,7 @@ class MultiUavEnv:
         训练环境随机生成武器、目标和无人机集群的初始位置
         测试环境需要中通过传参控制武器、目标和无人机集群的初始位置
         """
-
+        self.is_alive_by_mountain = [False for _ in range(self.n_total_uavs)]
         self.target = [0, 0, 0]
         self.weapon = [0, 0, 0]
         self.raw_uavs = []
@@ -334,7 +334,19 @@ class MultiUavEnv:
         map_obs = self.map.generate_img(position[0], position[1])[0][0]
 
         team = []
+
+        temp_uav = self.raw_uavs[uav_id]
+        position = temp_uav.get_normalize_position(normal_)
+        velocity = temp_uav.get_normalize_velocity()
+        right_vector = normalize(self.right_vector[uav_id])
+        team += position
+        team += velocity
+        team += right_vector
+        team += [1 if self.is_alive_by_mountain[uav_id] is True else 0]
+
         for i in range(self.n_total_uavs):
+            if i == uav_id:
+                continue
             # 本机位置和速度
             temp_uav = self.raw_uavs[i]
             position = temp_uav.get_normalize_position(normal_)
@@ -343,10 +355,8 @@ class MultiUavEnv:
             team += position
             team += velocity
             team += right_vector
-            team += [temp_uav.is_attacked_state.value]
-            team += [1 if i == 0 else 0]
+            team += [1 if self.is_alive_by_mountain[i] is True else 0]
 
-        team += [uav_id]
         weapon = (np.array(self.weapon) / normal_).tolist()
         target = (np.array(self.target) / normal_).tolist()
         team += weapon
@@ -401,10 +411,12 @@ class MultiUavEnv:
                     self.raw_uavs[u].status = UAVState.DESTROYED
                 else:
                     self.raw_uavs[u].is_attacked_state = game_uav_list[u].get_attacked_state()
-                    self.is_alive_by_mountain[u] = game_uav_list[u].is_re_alive_because_mountain
-                    if game_uav_list[u].is_re_alive_because_mountain:
+                    if self.raw_uavs[u].status == UAVState.ALIVE and game_uav_list[
+                        u].is_re_alive_because_mountain is True:
+                        self.is_alive_by_mountain[u] = True
                         game_uav_list[u].is_re_alive_because_mountain = False
-                        logger.info(f"ID {id(game_uav_list[u])} 重制is_re_alive_because_mountain")
+                        logger.info(
+                            f"ID {id(game_uav_list[u])} 重制is_re_alive_because_mountain，当前无人机状态 {self.raw_uavs[u].status, self.raw_uavs[u].position}")
                 if self.raw_uavs[u].is_attacked_state == AttackState.DESTROYED:
                     self.raw_uavs[u].status = UAVState.DESTROYED
 
@@ -465,7 +477,9 @@ class MultiUavEnv:
             assert self.n_total_uavs == 2
 
             current_distance_to_target_1 = compute_distance(current_p[1].position, self.target)
+            last_distance_to_target_1 = compute_distance(last_p[1].position, self.target)
             current_distance_to_target_0 = compute_distance(current_p[0].position, self.target)
+            last_distance_to_target_0 = compute_distance(last_p[0].position, self.target)
 
             if current_p[0].status != UAVState.ALIVE and current_p[1].status != UAVState.ALIVE:
                 self.reward = [0 for _ in range(self.n_total_uavs)]
@@ -488,7 +502,10 @@ class MultiUavEnv:
                 self.n_episode = self.n_episode + 1
                 return
 
-
+            if is_alive_by_mountain[0] and current_distance_to_target_1 < last_distance_to_target_1 or \
+                    is_alive_by_mountain[1] and current_distance_to_target_0 < last_distance_to_target_0:
+                self.reward = [0.1 for _ in self.n_total_uavs]
+                logger.info(f"有了点稠密奖励")
 
         else:
             assert self.n_total_uavs == 1
@@ -528,10 +545,6 @@ class MultiUavEnv:
             self.dump(msg)
             return
 
-        for i in range(self.n_total_uavs):
-            if is_alive_by_mountain[i]:
-                self.reward[i] += 0.1
-
     def compute_init_velocity(self):
         # 保持设定速率不变
         speed = self.uav_velocity_value
@@ -567,7 +580,7 @@ class MultiUavEnv:
         (N * 8 + 8 + 3 + 3)
         """
         if self.is_use_weapon:
-            return self.n_total_uavs * 11 + 7
+            return self.n_total_uavs * 10 + 6
         else:
             return 3 + 3 + 3 + 3 + 3
 

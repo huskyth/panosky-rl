@@ -152,7 +152,8 @@ class Bullet(AbstractEntry):
                 logger.info(f"移除后无人机列表ID {[id(x) for x in uav_list]}， {uav_list}")
                 return Weapon.BulletState.KILLED_NO_USE
             else:
-                logger.info(f"此处会获得奖励，因为被遮挡而没有被杀死 {*self.position, *self.target.position}")
+                logger.info(
+                    f"因为被遮挡而没有被杀死 {*self.position, *self.target.position, mmap.search_nh(*self.target.position[:2])}")
                 self.target.set_attacked_state(AttackState.SAFE)
                 self.target.is_re_alive_because_mountain = True
                 # 此处设置过奖励后重置哦
