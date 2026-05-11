@@ -1,3 +1,5 @@
+import os
+
 from onpolicy.envs.drone.weapons.factory.action_factory import *
 
 
@@ -52,4 +54,12 @@ class Game:
             else:
                 action.execute()
         logger.info(f"这里返回的UAV ID {[id(x) for x in GameManager.get_uav_list()]}")
+        return GameManager.get_uav_list()
+
+    @staticmethod
+    def try_get_current_target():
+        return GameManager.track_rader.try_get_current_target()
+
+    @staticmethod
+    def get_uav_list():
         return GameManager.get_uav_list()

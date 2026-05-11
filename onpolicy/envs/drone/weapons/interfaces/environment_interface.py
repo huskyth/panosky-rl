@@ -23,3 +23,11 @@ class EnvironmentInterface:
     @staticmethod
     def reset(number_uav, weapon_positions, uav_velocity, uav_position):
         Game.reset(number_uav, weapon_positions, uav_velocity, uav_position)
+
+    @staticmethod
+    def try_get_current_target():
+        return Game.try_get_current_target()
+
+    @staticmethod
+    def get_uav_list():
+        return Game.get_uav_list()

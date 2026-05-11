@@ -324,6 +324,9 @@ class MultiUavEnv:
         return [self.get_observation_of_a_uav(i) for i in range(self.n_total_uavs)]
 
     def get_observation_of_a_uav(self, uav_id):
+        """
+            uav_id == 0 为牺牲机
+        """
         assert self.is_use_weapon is True
         assert self.n_total_uavs == 2
         normal_ = np.array([self.map.map_max_x, self.map.map_max_y, self.max_available_height])
@@ -334,6 +337,8 @@ class MultiUavEnv:
 
         team = []
 
+        w_target = EnvironmentInterface.try_get_current_target()
+
         temp_uav = self.raw_uavs[uav_id]
         position = temp_uav.get_normalize_position(normal_)
         velocity = temp_uav.get_normalize_velocity()
@@ -341,6 +346,10 @@ class MultiUavEnv:
         team += position
         team += velocity
         team += right_vector
+        team += [1 if uav_id == 0 else 0]
+        is_collision = self.map.judge_mountain(*self.weapon, *temp_uav.position, 0, 'block')
+        team += [1 if is_collision else 0]
+        team += [1 if w_target is not None and w_target is EnvironmentInterface.get_uav_list()[uav_id] else 0]
 
         for i in range(self.n_total_uavs):
             if i == uav_id:
@@ -353,6 +362,10 @@ class MultiUavEnv:
             team += position
             team += velocity
             team += right_vector
+            team += [1 if i == 0 else 0]
+            is_collision = self.map.judge_mountain(*self.weapon, *temp_uav.position, 0, 'block')
+            team += [1 if is_collision else 0]
+            team += [1 if w_target is not None and w_target is EnvironmentInterface.get_uav_list()[i] else 0]
 
         weapon = (np.array(self.weapon) / normal_).tolist()
         target = (np.array(self.target) / normal_).tolist()
@@ -447,18 +460,8 @@ class MultiUavEnv:
     def set_reward(self, last_p):
         # TODO://待检查
         """
-        终止条件：
-            - 无任务机存活
-            - 任务机完成任务
-        诱饵机奖励：
-            - 引诱完成奖励：第一次到达雷达检测半径和武器开火半径中间
-            - 引诱距离奖励: 鼓励任务机到目标的平均距离 - 诱饵机到武器的距离 <= decoy_safe_dis
-            - 碰撞惩罚：发生碰撞
-        任务机奖励：
-            - 任务完成奖励：诱饵机完成引诱且任务机完成任务
-            - 目标距离奖励: 鼓励任务机靠近目标点
-            - 山体遮挡奖励: 无人机在武器检测范围内且存在山体遮挡
-            - 碰撞惩罚：发生碰撞
+            UAV_0牺牲机
+            UAV_1主机
         """
         # TODO://待检查，诱饵机奖励
         current_p = self.raw_uavs
@@ -472,9 +475,22 @@ class MultiUavEnv:
             current_distance_to_target_0 = compute_distance(current_p[0].position, self.target)
             last_distance_to_target_0 = compute_distance(last_p[0].position, self.target)
 
-            if current_p[0].status != UAVState.ALIVE and current_p[1].status != UAVState.ALIVE:
-                self.reward = [0 for _ in range(self.n_total_uavs)]
-                msg = f'任务机败亡-任务机状态为：{current_p[0].status.value, current_p[1].status.value}'
+            if current_distance_to_target_1 <= self.task_success_radius and current_p[
+                1].status == UAVState.ALIVE:
+                self.is_terminal = [True for _ in range(self.n_total_uavs)]
+                self.reward = [1 for _ in range(self.n_total_uavs)]
+                logger.info(
+                    f"PID-{os.getpid()}, mode-{self.mode}, episode-{self.n_episode}, \033[32m[terminated]："
+                    f"任务完成-UAV索引\033[0m，受攻击状态为 {current_p[0].is_attacked_state, current_p[1].is_attacked_state}")
+                self.dump("任务完成")
+                self.n_episode = self.n_episode + 1
+                return
+
+            if current_p[1].status != UAVState.ALIVE:
+                self.reward = [-1 for _ in range(self.n_total_uavs)]
+                if current_p[0].status == UAVState.ALIVE:
+                    self.reward[0] = -0.1
+                msg = f'任务机败亡-（总共 {self._episode_steps}）任务机状态为：{current_p[0].status.value, current_p[1].status.value}'
                 msg += f'-奖励-{self.reward}'
                 self.n_episode = self.n_episode + 1
                 self.is_terminal = [True for _ in range(self.n_total_uavs)]
@@ -483,21 +499,29 @@ class MultiUavEnv:
                 self.dump(msg)
                 return
 
-            if current_distance_to_target_1 <= self.task_success_radius and current_p[
-                0].status == UAVState.DESTROYED or current_distance_to_target_0 <= self.task_success_radius and \
-                    current_p[
-                        1].status == UAVState.DESTROYED:
-                self.is_terminal = [True for _ in range(self.n_total_uavs)]
-                self.reward = [self.task_success_reward for _ in range(self.n_total_uavs)]
-                logger.info(
-                    f"PID-{os.getpid()}, mode-{self.mode}, episode-{self.n_episode}, \033[32m[terminated]："
-                    f"任务完成-UAV索引\033[0m，受攻击状态为 {current_p[0].is_attacked_state, current_p[1].is_attacked_state}")
-                self.dump("任务完成")
-                self.n_episode = self.n_episode + 1
-                return
+            if current_p[0].status != UAVState.ALIVE:
+                self.reward[0] -= 0.8
+                self.reward[1] -= 0.0
 
+            if self.map.judge_mountain(*self.weapon, *current_p[0].position, 0, "block"):
+                self.reward[0] += 0.08
+                self.reward[1] += 0.0
+            else:
+                self.reward[0] -= 0.05
+                self.reward[1] -= 0.0
 
+            c_target = EnvironmentInterface.try_get_current_target()
+            if c_target is not None and c_target is EnvironmentInterface.get_uav_list()[0]:
+                self.reward[0] += 0.15
+                self.reward[1] += 0.0
 
+            if c_target is not None and c_target is EnvironmentInterface.get_uav_list()[1]:
+                self.reward[0] -= 0.0
+                self.reward[1] -= 0.15
+
+            if current_distance_to_target_1 < last_distance_to_target_1:
+                self.reward[0] += 0.0
+                self.reward[1] += 0.1
 
         else:
             assert self.n_total_uavs == 1
@@ -572,7 +596,7 @@ class MultiUavEnv:
         (N * 8 + 8 + 3 + 3)
         """
         if self.is_use_weapon:
-            return self.n_total_uavs * 10 + 6
+            return self.n_total_uavs * 12 + 6
         else:
             return 3 + 3 + 3 + 3 + 3
 
