@@ -25,7 +25,7 @@ class GameConfig:
         GameConfig.TEST_TURN = 0
         GameConfig.RANDOM_N = 0
 
-        GameConfig.THREAT_LEVEL_THRESHOLD = 0.04 / (1.892 + 0.08)  # 威胁程度阈值
+        GameConfig.THREAT_LEVEL_THRESHOLD = 0  # 威胁程度阈值
         GameConfig.CURRENT_GAME_TIME = 0
         GameConfig.map = None
         GameConfig.threat_level_priority = ThreatLevelPriority.DISTANCE

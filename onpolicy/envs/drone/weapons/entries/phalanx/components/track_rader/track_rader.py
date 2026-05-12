@@ -1,4 +1,5 @@
 from onpolicy.envs.drone.weapons.entries.phalanx.components.rader import *
+from onpolicy.utils.util import compute_distance
 
 
 class TrackRader(Rader):
@@ -9,7 +10,7 @@ class TrackRader(Rader):
         self.minimum_fire_distance = self.config.minimum_fire_distance
         self.minimum_track_distance = self.config.minimum_track_distance
         # TODO://速度需要修改，这个5是速度常量
-        GameConfig.THREAT_LEVEL_THRESHOLD = 5 / self.track_distance
+        GameConfig.THREAT_LEVEL_THRESHOLD = 0
 
         # 舷基座的位置，相对于绝对坐标
         self.position = config.common_config['position']
@@ -174,6 +175,10 @@ class TrackRader(Rader):
         else:
             logger.info("没有找到，因为最大威胁程度小于阈值 " + str(GameConfig.THREAT_LEVEL_THRESHOLD))
             self.current_target = None
+
+        for uav in threat_level_uav_list:
+            logger.info(f"当前无人机和雷达距离  {compute_distance(uav[1].position, self.position)}")
+        logger.info(f"选中的目标的距离为 {compute_distance(self.current_target.position, self.position)}")
         return self.current_target
 
     def adjust_board(self, fun):
@@ -254,7 +259,7 @@ class TrackRader(Rader):
         logger.info("uav_position = {}, self.position = {},distance_variation = {}".format(uav_position, self.position,
                                                                                            distance_variation))
         if distance == 0: return Inf
-        return distance_variation / distance
+        return 1 / distance
 
     def _cal_projection_velocity(self, single_uav):
         '''

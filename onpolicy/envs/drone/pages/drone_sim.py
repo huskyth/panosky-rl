@@ -28,6 +28,7 @@ rm_file = str(temp / f"pages/{DATA_FILE}")
 if os.path.exists(rm_file):
     os.remove(rm_file)
 
+
 # ===================== 1. 一次性读取 目标/武器 数据 =====================
 def load_target_weapon():
     """读取target和weapon，只加载一次"""
@@ -85,7 +86,8 @@ def main():
             drones = []
             for idx, uva in enumerate(uva_state_list):
                 pos = uva.get("position", [0, 0, 0])
-                print(f"【无人机与目标的真实距离】 {compute_distance(pos, target_pos)}，【无人机高度】{pos[2]}")
+                print(
+                    f"【{uva.get('status', 'None')}】-【无人机与目标的真实距离】 {compute_distance(pos, target_pos)}，【无人机高度】{pos[2]}， 【无人机与武器的真实距离】 {compute_distance(pos, weapon_pos)}")
                 x, y = map.for_html(pos[0], pos[1])
                 drones.append({
                     "id": f"UAV-{idx + 1:03d}",
