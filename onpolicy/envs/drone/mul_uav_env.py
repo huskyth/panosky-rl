@@ -410,7 +410,6 @@ class MultiUavEnv:
         self._episode_steps += 1  # 当前的回合数增加上动作执行的回合数。
 
         if any(is_collision):
-            logger.info(f"回退，碰撞就回退不执行")
 
             for i in range(len(is_collision)):
                 if is_collision[i]:
@@ -556,7 +555,7 @@ class MultiUavEnv:
                 return
 
         if self._episode_steps >= self.max_episode_steps:
-            self.reward = [0 for _ in range(self.n_total_uavs)]
+            self.reward = [-10 for _ in range(self.n_total_uavs)]
             msg = f'{self._episode_steps} step：超出最大步数限制'
             msg += f'-奖励-{self.reward}'
             self.n_episode = self.n_episode + 1
