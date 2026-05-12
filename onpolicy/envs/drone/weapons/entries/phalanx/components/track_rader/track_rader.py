@@ -98,7 +98,7 @@ class TrackRader(Rader):
         return can_fire
 
     def step_capture(self):
-        self.capture_time += 1
+        self.capture_time += 0
         logger.info("捕获时间自增，当前捕获时间是：" + str(self.capture_time))
 
     def reset_capture_time(self):

@@ -52,7 +52,7 @@ class Weapon(AbstractEntry):
             str(os.getpid()) + "发射了" + str(fire_number) + "枚子弹，还剩下" + str(self.current_bullet_num) + "枚子弹")
 
     def step_time_instruction(self):
-        self.time_instruction += UNIT_TIME
+        self.time_instruction += 0
         logger.info("指令准备时间自增，当前指令时间：" + str(self.time_instruction))
 
     def reset_time_instruction(self):

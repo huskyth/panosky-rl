@@ -563,7 +563,7 @@ class MultiUavEnv:
             logger.info(
                 f"PID-{os.getpid()}, mode-{self.mode}, "
                 f"episode-{self.n_episode}\033[31m[terminated]："
-                f"{msg}\033[0m，距离为{compute_distance(self.target, current_p[0].position)}")
+                f"{msg}\033[0m，距离为：{compute_distance(self.target, current_p[1].position)}")
             self.dump(msg)
             return
 
