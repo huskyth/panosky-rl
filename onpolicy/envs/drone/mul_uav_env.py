@@ -411,7 +411,10 @@ class MultiUavEnv:
 
         if any(is_collision):
             logger.info(f"回退，碰撞就回退不执行")
-            self.raw_uavs = last_state
+
+            for i in range(len(is_collision)):
+                if is_collision[i]:
+                    self.raw_uavs[i] = last_state[i]
 
         # 把位置传给游戏，然后获取执行动作后的受击状态并保存
         # TODO://待检查，先注释，训练完成了再解开
@@ -487,15 +490,13 @@ class MultiUavEnv:
                 self.reward = [1 for _ in range(self.n_total_uavs)]
                 logger.info(
                     f"PID-{os.getpid()}, mode-{self.mode}, episode-{self.n_episode}, \033[32m[terminated]："
-                    f"任务完成-UAV索引\033[0m，受攻击状态为 {current_p[0].is_attacked_state, current_p[1].is_attacked_state}")
+                    f"任务完成-UAV索引\033[0m，状态为 {current_p[0].status, current_p[1].status}")
                 self.dump("任务完成")
                 self.n_episode = self.n_episode + 1
                 return
 
             if current_p[1].status != UAVState.ALIVE:
                 self.reward = [-1 for _ in range(self.n_total_uavs)]
-                if current_p[0].status == UAVState.ALIVE:
-                    self.reward[0] = -0.1
                 msg = f'任务机败亡-（总共 {self._episode_steps}）任务机状态为：{current_p[0].status.value, current_p[1].status.value}'
                 msg += f'-奖励-{self.reward}'
                 self.n_episode = self.n_episode + 1
@@ -509,10 +510,6 @@ class MultiUavEnv:
                 if is_con:
                     self.reward[x] -= 1
 
-            if current_p[0].status != UAVState.ALIVE:
-                self.reward[0] -= 0.8
-                self.reward[1] -= 0.0
-
             if self.map.judge_mountain(*self.weapon, *current_p[0].position, 0, "block"):
                 self.reward[0] += 0.08
                 self.reward[1] += 0.0
@@ -523,14 +520,14 @@ class MultiUavEnv:
             c_target = EnvironmentInterface.try_get_current_target()
             if c_target is not None and c_target is EnvironmentInterface.get_uav_list()[0]:
                 self.reward[0] += 0.15
-                self.reward[1] += 0.0
+                self.reward[1] += 0.1
 
             if c_target is not None and c_target is EnvironmentInterface.get_uav_list()[1]:
-                self.reward[0] -= 0.0
+                self.reward[0] -= 0.25
                 self.reward[1] -= 0.15
 
             if current_distance_to_target_1 < last_distance_to_target_1:
-                self.reward[0] += 0.0
+                self.reward[0] += 0.001
                 self.reward[1] += 0.1
 
         else:
