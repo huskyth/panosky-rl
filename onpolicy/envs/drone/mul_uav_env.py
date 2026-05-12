@@ -385,6 +385,7 @@ class MultiUavEnv:
         # 获取执行动作前的UAV集群观测
         last_state = copy.deepcopy(self.raw_uavs)
         # 计算每架UAV执行动作后的速度、位置、碰撞情况以及与武器之间是否存在山体遮挡
+        is_collision = [False for _ in range(self.n_total_uavs)]
         for idx in range(self.n_total_uavs):
             if self.raw_uavs[idx].status != UAVState.ALIVE:
                 continue
@@ -401,12 +402,16 @@ class MultiUavEnv:
             actual_velocity = (np.array(after_rotate_velocity_direction_in_parent) * self.uav_velocity_value).tolist()
             self.right_vector[idx] = after_rotate_horizontal_right_vector_in_parent
             # 判断是否会发生碰撞
-            self.judge_uav_collision_and_set(idx, *next_position)
-
+            is_con = self.judge_uav_collision_and_set(idx, *next_position)
+            is_collision[idx] = is_con
             # 执行动作改变UAV状态
             self.raw_uavs[idx].set_position(*next_position)
             self.raw_uavs[idx].set_velocity(*actual_velocity)
         self._episode_steps += 1  # 当前的回合数增加上动作执行的回合数。
+
+        if any(is_collision):
+            logger.info(f"回退，碰撞就回退不执行")
+            self.raw_uavs = last_state
 
         # 把位置传给游戏，然后获取执行动作后的受击状态并保存
         # TODO://待检查，先注释，训练完成了再解开
@@ -428,17 +433,18 @@ class MultiUavEnv:
                      "_episode_steps": self._episode_steps}
         self.episode_data.append(data_save)
         # 计算奖励值和终止符号
-        self.set_reward(last_state)
+        self.set_reward(last_state, is_collision)
         ret_reward = [[x] for x in self.reward]
         return self.get_state_of_all_uav(), ret_reward, self.is_terminal, [self.raw_uavs[i].status.value for i in
                                                                            range(self.n_total_uavs)]
 
     def judge_uav_collision_and_set(self, current_uav_idx, next_x, nex_y, next_z):
+        is_collision = False
         p_x, p_y, p_z = self.raw_uavs[current_uav_idx].position
         # 判断是否与地面发生碰撞
         if self.map.judge_mountain(p_x, p_y, p_z, next_x, nex_y, next_z, self.coll_safe_dis, 'ground'):
             # 如果路径中碰撞也算
-            self.raw_uavs[current_uav_idx].status = UAVState.GROUND_COLLISION
+            is_collision = True
         # 判断是否与无人机发生碰撞
         for u_idx in range(self.n_total_uavs):
             temp = self.raw_uavs[u_idx]
@@ -448,16 +454,16 @@ class MultiUavEnv:
             if temp.status != UAVState.ALIVE:
                 continue
             if compute_distance([next_x, nex_y, next_z], temp.position) < self.uav_length + self.coll_safe_dis:
-                self.raw_uavs[u_idx].status = UAVState.UAV_COLLISION
-                self.raw_uavs[current_uav_idx].status = UAVState.UAV_COLLISION
+                is_collision = True
 
         # 判断是否超界
         if (
                 next_x < self.map.map_min_x or next_x > self.map.map_max_x or nex_y < self.map.map_min_y or nex_y > self.map.map_max_y
                 or next_z < self.min_available_height or next_z > self.max_available_height):
-            self.raw_uavs[current_uav_idx].status = UAVState.GROUND_COLLISION
+            is_collision = True
+        return is_collision
 
-    def set_reward(self, last_p):
+    def set_reward(self, last_p, is_collision):
         # TODO://待检查
         """
             UAV_0牺牲机
@@ -498,6 +504,10 @@ class MultiUavEnv:
                     f"PID-{os.getpid()}, mode-{self.mode}, episode-{self.n_episode}\033[31m[terminated]：{msg}\033[0m")
                 self.dump(msg)
                 return
+
+            for x, is_con in enumerate(is_collision):
+                if is_con:
+                    self.reward[x] -= 1
 
             if current_p[0].status != UAVState.ALIVE:
                 self.reward[0] -= 0.8

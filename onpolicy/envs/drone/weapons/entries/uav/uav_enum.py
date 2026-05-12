@@ -22,11 +22,4 @@ class AttackState(AbsEnum):
 
 class UAVState(AbsEnum):
     ALIVE = 'ALIVE'
-    UAV_COLLISION = 'UAV_COLLISION'
-    GROUND_COLLISION = 'GROUND_COLLISION'
     DESTROYED = 'DESTROYED'
-
-
-if __name__ == '__main__':
-    r = AbsEnum.build_state(UAVState.UAV_COLLISION.value, UAVState)
-    print(r)
