@@ -81,14 +81,22 @@ def main():
         for step_info in episode_path:
             uva_state_list = step_info.get("uva_state", [])
             step = step_info.get("_episode_steps", 0)
-
+            assert len(uva_state_list) == 2
             # 构造输出给前端的无人机数据
             drones = []
             reward = step_info['reward']
+            r_msg = step_info.get('r_msg', "Not set")
             print(f"📌 == 【Step】{step}" + '=' * 150)
-            print(f"当前目标为 {step_info['c_target_id']}, 各自奖励为 {reward}")
+            r_msg = '\n'.join(r_msg)
+            print(f"当前目标为 {step_info['c_target_id']}, 各自奖励为 {reward}，奖励描述为: \n {r_msg}")
+            pos_0 = None
+            dis = None
             for idx, uva in enumerate(uva_state_list):
                 pos = uva.get("position", [0, 0, 0])
+                if idx == 0:
+                    pos_0 = pos
+                else:
+                    dis = compute_distance(pos_0, pos)
                 print(
                     f"ID: {uva['ID']}-【{uva.get('status', 'None')}】-【无人机与目标的真实距离】 {compute_distance(pos, target_pos)}，"
                     f"【无人机高度】{pos[2]}， 【无人机与武器的真实距离】 {compute_distance(pos, weapon_pos)}"
@@ -102,7 +110,7 @@ def main():
                     "speed": 11.414917009282588,
                     "battery": 97.85000000000012
                 })
-
+            print(f"两机距离为 {dis}")
             # 写入JSON文件，供前端Three.js读取
             with open(DATA_FILE, "w", encoding="utf-8") as f:
                 json.dump(drones, f, ensure_ascii=False, indent=2)
