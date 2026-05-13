@@ -19,7 +19,7 @@ from pathlib import Path
 
 temp = Path(__file__).parent.parent
 
-config_path = temp / 'config/eval.ini'
+config_path = temp / 'config/th_demo.ini'
 cf = configparser.ConfigParser()
 cf.read(str(config_path), encoding="utf-8")
 MOUNTAIN_NAME = cf.get("map", "map_data_file")
@@ -84,10 +84,15 @@ def main():
 
             # 构造输出给前端的无人机数据
             drones = []
+            reward = step_info['reward']
+            print(f"📌 == 【Step】{step}" + '=' * 150)
+            print(f"当前目标为 {step_info['c_target_id']}, 各自奖励为 {reward}")
             for idx, uva in enumerate(uva_state_list):
                 pos = uva.get("position", [0, 0, 0])
                 print(
-                    f"【{uva.get('status', 'None')}】-【无人机与目标的真实距离】 {compute_distance(pos, target_pos)}，【无人机高度】{pos[2]}， 【无人机与武器的真实距离】 {compute_distance(pos, weapon_pos)}")
+                    f"ID: {uva['ID']}-【{uva.get('status', 'None')}】-【无人机与目标的真实距离】 {compute_distance(pos, target_pos)}，"
+                    f"【无人机高度】{pos[2]}， 【无人机与武器的真实距离】 {compute_distance(pos, weapon_pos)}"
+                    f"")
                 x, y = map.for_html(pos[0], pos[1])
                 drones.append({
                     "id": f"UAV-{idx + 1:03d}",
@@ -102,7 +107,8 @@ def main():
             with open(DATA_FILE, "w", encoding="utf-8") as f:
                 json.dump(drones, f, ensure_ascii=False, indent=2)
 
-            print(f"📌 第 {step} 步 | 无人机数量: {len(drones)}")
+            print()
+
             time.sleep(STEP_INTERVAL)
 
         # 一轮路径跑完，停顿一段时间再循环

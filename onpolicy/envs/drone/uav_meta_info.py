@@ -27,6 +27,7 @@ class TrainUAV:
 
     def to_dict(self):
         return {
+            'ID': id(self),
             "position": self.position,
             "velocity": self.velocity,
             "status": self.status.value,

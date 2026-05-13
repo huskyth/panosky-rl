@@ -283,10 +283,16 @@ class MultiUavEnv:
             EnvironmentInterface.reset(self.n_total_uavs, self.weapon,
                                        [self.raw_uavs[i].velocity for i in range(self.n_total_uavs)],
                                        [self.raw_uavs[i].position for i in range(self.n_total_uavs)])
-
+        c_target = EnvironmentInterface.try_get_current_target()
+        which_idx = None
+        for i, x in enumerate(EnvironmentInterface.get_uav_list()):
+            if x is c_target and c_target is not None:
+                which_idx = i
+                break
         data_save = {"uva_state": [x.to_dict() for x in self.raw_uavs],
                      "uva_actions": [-1 for _ in range(self.n_total_uavs)],
-                     "_episode_steps": self._episode_steps}
+                     "_episode_steps": self._episode_steps, "reward": self.reward,
+                     "c_target_id": id(self.raw_uavs[which_idx]) if which_idx is not None else "None"}
         self.episode_data.append(data_save)
 
         # 获取UAV集群观测并返回
@@ -431,14 +437,25 @@ class MultiUavEnv:
                 if self.raw_uavs[u].is_attacked_state == AttackState.DESTROYED:
                     self.raw_uavs[u].status = UAVState.DESTROYED
 
-        data_save = {"uva_state": [x.to_dict() for x in self.raw_uavs], "uva_actions": action.tolist(),
-                     "_episode_steps": self._episode_steps}
-        self.episode_data.append(data_save)
         # 计算奖励值和终止符号
-        self.set_reward(last_state, is_collision)
+        self.set_reward(last_state, is_collision, action)
+
         ret_reward = [[x] for x in self.reward]
         return self.get_state_of_all_uav(), ret_reward, self.is_terminal, [self.raw_uavs[i].status.value for i in
                                                                            range(self.n_total_uavs)]
+
+    def append_data(self, action):
+        c_target = EnvironmentInterface.try_get_current_target()
+        which_idx = None
+        for i, x in enumerate(EnvironmentInterface.get_uav_list()):
+            if x is c_target and c_target is not None:
+                which_idx = i
+                break
+
+        data_save = {"uva_state": [x.to_dict() for x in self.raw_uavs], "uva_actions": action.tolist(),
+                     "_episode_steps": self._episode_steps, "reward": self.reward,
+                     "c_target_id": id(self.raw_uavs[which_idx]) if which_idx is not None else "None"}
+        self.episode_data.append(data_save)
 
     def judge_uav_collision_and_set(self, current_uav_idx, next_x, nex_y, next_z):
         is_collision = False
@@ -455,7 +472,7 @@ class MultiUavEnv:
             is_collision = True
         return is_collision
 
-    def set_reward(self, last_p, is_collision):
+    def set_reward(self, last_p, is_collision, action):
         # TODO://待检查
         """
             UAV_0牺牲机
@@ -489,7 +506,9 @@ class MultiUavEnv:
                     self.reward[0] += 1
                 logger.info(
                     f"PID-{os.getpid()}, mode-{self.mode}, episode-{self.n_episode}, \033[32m[terminated]："
-                    f"任务完成-UAV索引\033[0m，状态为 {current_p[0].status, current_p[1].status}")
+                    f"任务完成\033[0m，奖励为{self.reward}, 状态为 {current_p[0].status, current_p[1].status}")
+
+                self.append_data(action)
                 self.dump("任务完成")
                 self.n_episode = self.n_episode + 1
                 return
@@ -498,12 +517,13 @@ class MultiUavEnv:
                 self.reward = [-1 for _ in range(self.n_total_uavs)]
                 if current_p[0] == UAVState.ALIVE:
                     self.reward[0] -= 1
-                msg = f'任务机败亡-（总共 {self._episode_steps}）任务机状态为：{current_p[0].status.value, current_p[1].status.value}'
+                msg = f'任务机败亡-（总共 {self._episode_steps}, 奖励为 {self.reward}）任务机状态为：{current_p[0].status.value, current_p[1].status.value}'
                 msg += f'-奖励-{self.reward}'
                 self.n_episode = self.n_episode + 1
                 self.is_terminal = [True for _ in range(self.n_total_uavs)]
                 logger.info(
                     f"PID-{os.getpid()}, mode-{self.mode}, episode-{self.n_episode}\033[31m[terminated]：{msg}\033[0m")
+                self.append_data(action)
                 self.dump(msg)
                 return
 
@@ -523,12 +543,11 @@ class MultiUavEnv:
                 if current_distance_to_weapon_1 > last_distance_to_weapon_1:
                     self.reward[1] += 0.15
 
-
             if current_distance_to_target_1 < last_distance_to_target_1:
                 # logger.info(f"进程ID {os.getpid()} \033[32m[terminated]：距离减小\033[0m, {self.weapon}, {current_p[0].position}")
                 self.reward[1] += 0.1
 
-            # logger.info(f"奖励情况为 {self.reward}")
+            logger.info(f"奖励情况为 {self.reward}")
 
         else:
             assert self.n_total_uavs == 1
@@ -567,8 +586,11 @@ class MultiUavEnv:
                 f"PID-{os.getpid()}, mode-{self.mode}, "
                 f"episode-{self.n_episode}\033[31m[terminated]："
                 f"{msg}\033[0m，距离为：{compute_distance(self.target, current_p[1].position)}")
+            self.append_data(action)
             self.dump(msg)
             return
+
+        self.append_data(action)
 
     def compute_init_velocity(self):
         # 保持设定速率不变
