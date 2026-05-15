@@ -108,7 +108,10 @@ def main():
                     "z": y,
                     "altitude": pos[2] / map.map_x_dis,
                     "speed": 11.414917009282588,
-                    "battery": 97.85000000000012
+                    "battery": 97.85000000000012,
+                    "aimX": 0,
+                    "aimY": step*2,
+                    "aimZ": 0,
                 })
             print(f"两机距离为 {dis}")
             # 写入JSON文件，供前端Three.js读取

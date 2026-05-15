@@ -211,6 +211,7 @@
                 this.drones = new Map();
                 this.weapons = new Map();
                 this.targets = new Map();
+                this.weaponAimLines = new Map();
                 this.scene = null;
                 this.camera = null;
                 this.renderer = null;
@@ -321,6 +322,21 @@
               const sprite = new THREE.Sprite(spriteMat);
               sprite.scale.set(20, 20, 1);
               return sprite;
+            }
+
+            // 创建武器到目标的瞄准线
+            createAimLine() {
+                const points = [
+                    new THREE.Vector3(0,0,0),
+                    new THREE.Vector3(10,10,10)
+                ];
+                const geo = new THREE.BufferGeometry().setFromPoints(points);
+                const mat = new THREE.LineBasicMaterial({
+                    color: 0xff3333,
+                    linewidth: 2
+                });
+                const line = new THREE.Line(geo, mat);
+                return line;
             }
 
             // ==================== 地形系统 ====================
@@ -1030,9 +1046,41 @@
                     }
                 });
 
-                // ========== 修复：武器 + 目标 实时移动 ==========
+
+                // ========== 实时从无人机JSON取坐标 → 画红色枪管瞄准线 ==========
                 this.weapons.forEach(weapon => {
-                    if (weapon.targetPosition) weapon.group.position.lerp(weapon.targetPosition, 0.05);
+                    const wid = weapon.id;
+                    const wd = weapon.data;
+
+                    // 武器底部位置
+                    const start = new THREE.Vector3(wd.x, (wd.altitude || 0) + 3.5, wd.z);
+
+                    // ======================
+                    // 核心：取第一架无人机实时坐标（你JSON传过来的）
+                    // ======================
+                    let targetDrone = Array.from(this.drones.values())[0];
+                    if (!targetDrone) return;
+
+                    const dd = targetDrone.data;
+                    const end = new THREE.Vector3(dd.aimX, dd.aimY, dd.aimZ);
+
+                    console.log("end", end);
+
+                    // 创建线
+                    if (!this.weaponAimLines.has(wid)) {
+                        const line = this.createAimLine();
+                        this.world.add(line);
+                        this.weaponAimLines.set(wid, line);
+                    }
+
+                    // 更新两点位置
+                    const line = this.weaponAimLines.get(wid);
+                    const pos = new Float32Array([
+                        start.x, start.y, start.z,
+                        end.x, end.y, end.z
+                    ]);
+                    line.geometry.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+                    line.geometry.attributes.position.needsUpdate = true;
                 });
                 this.targets.forEach(target => {
                     if (target.targetPosition) target.group.position.lerp(target.targetPosition, 0.05);
