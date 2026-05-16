@@ -128,7 +128,7 @@ class Bullet(AbstractEntry):
         return distance / self.velocity
 
     def step_attack_a_target_and_is_kill(self, uav_list, fun):
-        logger.INFO("id为：" + self.get_id() + "的子弹还需要飞行的时间：" + str(self.all_time_to_fly))
+        logger.info("id为：" + self.get_id() + "的子弹还需要飞行的时间：" + str(self.all_time_to_fly))
 
         if self.all_time_to_fly <= UNIT_TIME:
             # 时间到了，进行毁伤计算

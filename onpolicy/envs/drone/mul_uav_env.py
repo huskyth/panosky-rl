@@ -427,7 +427,7 @@ class MultiUavEnv:
         if self.is_use_weapon:
             position = [self.raw_uavs[u].position for u in range(self.n_total_uavs)]
             velocity = [self.raw_uavs[u].velocity for u in range(self.n_total_uavs)]
-            game_uav_list = EnvironmentInterface.step(position, velocity, self.map)
+            game_uav_list = EnvironmentInterface.step(position, velocity)
             for u in range(self.n_total_uavs):
                 if game_uav_list[u] is None:
                     self.raw_uavs[u].is_attacked_state = AttackState.DESTROYED

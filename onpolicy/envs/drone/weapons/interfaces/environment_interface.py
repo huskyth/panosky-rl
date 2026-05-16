@@ -17,8 +17,8 @@ class EnvironmentInterface:
         return ConfigFactory.create(config_type=ConfigEnum.phalanx).track_rader_config.get_fire_distance()
 
     @staticmethod
-    def step(actions, uav_velocity, mmap):
-        return Game.step(actions, uav_velocity, mmap)
+    def step(actions, uav_velocity):
+        return Game.step(actions, uav_velocity)
 
     @staticmethod
     def reset(number_uav, weapon_positions, uav_velocity, uav_position):

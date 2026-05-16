@@ -44,13 +44,13 @@ class Game:
         GameManager.uav_position_update(uav_position)
 
     @staticmethod
-    def step(action, uav_velocity, mmap):
+    def step(action, uav_velocity):
         GameManager.uav_position_update(action)
         GameManager.uav_velocity_update(uav_velocity)
 
         for action in Game.action_list:
             if isinstance(action, BulletAttackAction):
-                action.execute(mmap)
+                action.execute()
             else:
                 action.execute()
         logger.info(f"这里返回的UAV ID {[id(x) for x in GameManager.get_uav_list()]}")
