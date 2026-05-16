@@ -21,8 +21,8 @@ class EnvironmentInterface:
         return Game.step(actions, uav_velocity)
 
     @staticmethod
-    def reset(number_uav, weapon_positions, uav_velocity, uav_position):
-        Game.reset(number_uav, weapon_positions, uav_velocity, uav_position)
+    def reset(number_uav, weapon_positions, uav_velocity, uav_position, mmap):
+        Game.reset(number_uav, weapon_positions, uav_velocity, uav_position, mmap)
 
     @staticmethod
     def try_get_current_target():

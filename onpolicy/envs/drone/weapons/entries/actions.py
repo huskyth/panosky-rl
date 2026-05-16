@@ -139,8 +139,7 @@ class TimeStepAction(AbstractAction):
     @staticmethod
     def execute():
         content = TrackRaderState.get_current_string_state()
-        logger.info("当前状态", [content])
-        logger.info("当前状态为：" + content)
+        logger.info(f"✅【当前时间】{GameConfig.CURRENT_GAME_TIME}【当前状态为】-{content}{'=' * 123}")
         logger.info("当前时间{},随机数n为{}".format(GameConfig.CURRENT_GAME_TIME, GameConfig.RANDOM_N))
         GameConfig.CURRENT_GAME_TIME = round(UNIT_TIME + GameConfig.CURRENT_GAME_TIME, 1)
         for i in range(len(GameManager.uav_list)):
@@ -207,6 +206,8 @@ class AdjustBoardAction(AbstractAction):
             # 当前目标存在，只在调舷状态执行调舷
             is_in_track_range = GameManager.track_rader.is_target_in_track_range(GameManager.get_uav_index)
             can_use_because_no_mountain = GameManager.track_rader.is_target_can_use_because_no_mountain()
+            if not can_use_because_no_mountain:
+                logger.info(f"会因为不能用而被移除")
             if not is_in_track_range or not can_use_because_no_mountain:
                 GameManager.track_rader.remove_target()
                 GameManager.weapon.reset_fire_instruction()
@@ -245,6 +246,8 @@ class CaptureAction(AbstractAction):
         if TrackRaderState.is_capture_state():
             is_in_track_range = GameManager.track_rader.is_target_in_track_range(GameManager.get_uav_index)
             can_use_because_no_mountain = GameManager.track_rader.is_target_can_use_because_no_mountain()
+            if not can_use_because_no_mountain:
+                logger.info(f"会因为不能用而被移除")
             if not is_in_track_range or not can_use_because_no_mountain:
                 GameManager.track_rader.remove_target()
                 GameManager.track_rader.reset_capture_time()
@@ -282,7 +285,8 @@ class LoadBulletAction(AbstractAction):
             return
         is_target_in_track_range = GameManager.track_rader.is_target_in_track_range(GameManager.get_uav_index)
         can_use = GameManager.track_rader.is_target_can_use_because_no_mountain()
-
+        if not can_use:
+            logger.info(f"会因为不能用而被移除")
         if not is_target_in_track_range or not can_use:
             LoadBulletAction.end_state = TrackStateEnum.NORMAL
             GameManager.track_rader.remove_target()
@@ -364,6 +368,8 @@ class FireAction(AbstractAction):
                     distance_of_2_point(GameManager.track_rader.position,
                                         GameManager.track_rader.current_target.position)), is_in_file=False)
             can_use = GameManager.track_rader.is_target_can_use_because_no_mountain()
+            if not can_use:
+                logger.info(f"会因为不能用而被移除")
             if not is_target_in_fire_range or not can_use:
                 logger.info("因为超出开火距离或者有山而被设置为没有目标状态")
                 GameManager.track_rader.remove_target()
@@ -371,10 +377,3 @@ class FireAction(AbstractAction):
                 TrackRaderState.set_normal_state()
             else:
                 FireAction._fire()
-
-
-if __name__ == '__main__':
-    GameManager.instance(1)
-    GameManager.print_singletance()
-    GameManager.instance(1)
-    GameManager.print_singletance()

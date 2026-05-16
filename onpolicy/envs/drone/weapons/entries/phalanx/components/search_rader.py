@@ -2,8 +2,9 @@ from onpolicy.envs.drone.weapons.entries.phalanx.components.rader import *
 
 
 class SearchRader(Rader):
-    def __init__(self, config):
+    def __init__(self, config, mmap):
         super().__init__(config)
+        self.map = mmap
         self.search_interval = self.config.search_confirm_time[0]
         self.detection_distance = self.config.detection_distance
         self.position = config.common_config['position']
@@ -62,7 +63,18 @@ class SearchRader(Rader):
             if single_uav is None:
                 logger.info("无人机{}被摧毁了，所以此无人机无法被列入搜索列表".format(index))
                 continue
-            if single_uav.search_marked_times >= TIME_TO_CONFIRM_A_UAV and not single_uav.get_mountain_exist_bool(
-                    self.is_a_uav_in_search_range(single_uav)):
+
+            is_block = self.map.judge_mountain(*self.position, *single_uav.position, 0, 'block')
+
+            if single_uav.search_marked_times >= TIME_TO_CONFIRM_A_UAV and not is_block and \
+                    self.is_a_uav_in_search_range(
+                        single_uav):
                 uav_3_times_list.append(single_uav)
+            else:
+                if not self.is_a_uav_in_search_range(single_uav):
+                    logger.info(f"因为不在搜索范围被忽略")
+                if is_block:
+                    logger.info(f"因为山存在遮挡被忽略")
+                if single_uav.search_marked_times < TIME_TO_CONFIRM_A_UAV:
+                    logger.info(f"因为被标记次数不够被忽略")
         return uav_3_times_list

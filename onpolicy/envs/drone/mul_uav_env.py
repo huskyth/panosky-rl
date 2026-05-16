@@ -283,7 +283,7 @@ class MultiUavEnv:
         if self.is_use_weapon:
             EnvironmentInterface.reset(self.n_total_uavs, self.weapon,
                                        [self.raw_uavs[i].velocity for i in range(self.n_total_uavs)],
-                                       [self.raw_uavs[i].position for i in range(self.n_total_uavs)])
+                                       [self.raw_uavs[i].position for i in range(self.n_total_uavs)], self.map)
         c_target = EnvironmentInterface.try_get_current_target()
         which_idx = None
         for i, x in enumerate(EnvironmentInterface.get_uav_list()):

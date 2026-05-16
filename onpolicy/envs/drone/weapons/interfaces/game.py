@@ -33,12 +33,12 @@ class Game:
                             Game.bullet_attack_action]
 
     @staticmethod
-    def reset(number_uav, weapon_positions, uav_velocity, uav_position):
+    def reset(number_uav, weapon_positions, uav_velocity, uav_position, mmap):
         if not Game.action_init_bool:
             Game._action_init()
             Game.action_init_bool = True
         GameManager.destroy()
-        GameManager.instance(number_uav)
+        GameManager.instance(number_uav, map=mmap)
         GameManager.phalanx.set_position(weapon_positions)
         GameManager.uav_velocity_update(uav_velocity)
         GameManager.uav_position_update(uav_position)

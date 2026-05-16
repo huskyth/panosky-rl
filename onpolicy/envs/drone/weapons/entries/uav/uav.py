@@ -18,7 +18,6 @@ class UAV(AbstractEntry):
         self.type = UAVType.TASK
         self.state = UAVState.ALIVE
 
-
     def set_uav_type(self, uav_type):
         self.type = uav_type
 
@@ -67,13 +66,6 @@ class UAV(AbstractEntry):
     def set_velocity(self, velocity):
         self.velocity = length_of_vector(velocity)
         self.velocity_direction = normalize(velocity.copy())
-
-    def get_mountain_exist_bool(self, is_in_search_range):
-        """
-            :param is_in_search_range:
-            这里一律返回False，消除影响
-        """
-        return False
 
     def print_self(self):
         return 'id为：' + self.get_id() + ", 被标记次数为：" + str(self.search_marked_times) + "  "

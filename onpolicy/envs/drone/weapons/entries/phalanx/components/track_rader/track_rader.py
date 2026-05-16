@@ -3,8 +3,9 @@ from onpolicy.utils.util import compute_distance
 
 
 class TrackRader(Rader):
-    def __init__(self, config):
+    def __init__(self, config, mmap):
         super().__init__(config)
+        self.map = mmap
         self.track_distance = self.config.track_distance
         self.fire_distance = self.config.fire_distance
         self.minimum_fire_distance = self.config.minimum_fire_distance
@@ -161,8 +162,11 @@ class TrackRader(Rader):
                                threat_level_uav_list]
         logger.info("威胁程度概述：" + str(threat_level_string), is_in_file=False)
         for entry in threat_level_uav_list:
-            if max_threat_level < entry[0] and not entry[1].get_mountain_exist_bool(
-                    self.search_rader.is_a_uav_in_search_range(entry[1])):
+            is_block = self.map.judge_mountain(*self.position, *entry[1].position, 0, 'block')
+            is_in = self.search_rader.is_a_uav_in_search_range(entry[1])
+            if is_block:
+                logger.info(f"当前无人机因为被山遮挡从而没有被锁定")
+            if max_threat_level < entry[0] and not is_block and is_in:
                 max_threat_level = entry[0]
                 self.current_target = entry[1]
         if max_threat_level > GameConfig.THREAT_LEVEL_THRESHOLD:
@@ -234,8 +238,11 @@ class TrackRader(Rader):
 
     def is_target_can_use_because_no_mountain(self):
         assert self.current_target is not None, "current target is None"
-        return not self.current_target.get_mountain_exist_bool(
-            self.search_rader.is_a_uav_in_search_range(self.current_target))
+        is_block = self.map.judge_mountain(*self.position, *self.current_target.position, 0, 'block')
+        if is_block:
+            logger.info(f"密集阵与id为{self.current_target.id}的无人机之间有障碍物，无法使用")
+        is_in = self.search_rader.is_a_uav_in_search_range(self.current_target)
+        return not is_block and is_in
 
     def is_target_in_fire_range(self):
         assert self.current_target is not None, "current target is None"

@@ -6,6 +6,10 @@ import warnings
 
 warnings.filterwarnings('ignore')
 
+from onpolicy.utils.format_logger import AppLogger
+
+logger = AppLogger().get_logger()
+
 
 class Map(object):
     map = None
@@ -89,6 +93,7 @@ class Map(object):
         return distance
 
     def judge_mountain(self, x1, y1, z1, x2, y2, z2, coll_safe_dis, judge_type):
+        logger.info(f"当前起点 {x1, y1, z1}, 终点 {x2, y2, z2}， 判断类型 {judge_type} 安全距离 {coll_safe_dis}，便于复现")
         if judge_type not in ['block', 'ground']:
             raise Exception("judge_type must be 'block' or 'ground'")
         distance = self.calculate_distance(x1, y1, z1, x2, y2, z2)
@@ -230,7 +235,7 @@ class Map(object):
             # --------------------- 判断遮挡（必中） ---------------------
             if self.judge_mountain(x1, y1, z1, x2, y2, z2, coll_safe_dis, 'block'):
                 return round(x1, 2), round(y1, 2), round(z1, 2), \
-                    round(x2, 2), round(y2, 2), round(z2, 2)
+                       round(x2, 2), round(y2, 2), round(z2, 2)
 
         # 终极兜底：强制生成一个低高度点（100%遮挡）
         x1, y1 = 100, 100
