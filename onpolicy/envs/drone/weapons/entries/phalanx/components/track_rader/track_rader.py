@@ -272,13 +272,3 @@ class TrackRader(Rader):
                                                                                                     track_2_uav_vector))
         return abs(
             dot_of_2_vector(track_2_uav_vector, scalar_mul_vector(uav_velocity, normalize(uav_velocity_direction))))
-
-
-if __name__ == '__main__':
-    from onpolicy.envs.drone.weapons.factory.config_factory import ConfigEnum, ConfigFactory
-    from onpolicy.envs.drone.weapons.entries.phalanx.phalanx import Phalanx
-    from onpolicy.envs.drone.weapons.factory.uav_factory import UAVFactory
-
-    tr = Phalanx(ConfigFactory.create(ConfigEnum.phalanx))
-    tr.track_rader.current_target = UAVFactory.create()
-    tr.track_rader.calculate_adjust_data()
