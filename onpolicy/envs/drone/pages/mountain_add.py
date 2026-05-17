@@ -5,7 +5,7 @@ import json
 def write_mdata_to_file(mountain):
     map = Map(mountain, 30, 3.05)
 
-    heights = (map.map_z / map.map_x_dis).flatten().tolist()
+    heights = (map.map_z / 1).flatten().tolist()
 
     # ========== 3. 地形数据（可选） ==========
 

@@ -67,7 +67,7 @@ def main():
     target_pos, weapon_pos = load_target_weapon()
     wx, wy, wz = weapon_pos
     tx, ty, tz = target_pos
-    write_data_to_file(*map.for_html(wx, wy), wz / map.map_x_dis, *map.for_html(tx, ty), tz / map.map_x_dis)
+    write_data_to_file(*map.for_html(wx, wy), wz / 1, *map.for_html(tx, ty), tz / 1)
     # 加载完整路径
     episode_path = load_episode_path()
 
@@ -106,7 +106,7 @@ def main():
                     "id": f"UAV-{idx + 1:03d}",
                     "x": x,
                     "z": y,
-                    "altitude": pos[2] / map.map_x_dis,
+                    "altitude": pos[2] / 1,
                     "speed": 11.414917009282588,
                     "battery": 97.85000000000012,
                     "aimX": map.for_html(wx, wy)[0],
