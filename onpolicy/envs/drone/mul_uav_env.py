@@ -345,7 +345,12 @@ class MultiUavEnv:
         team = []
 
         w_target = EnvironmentInterface.try_get_current_target()
-        target_idx = 0 if w_target is not None and w_target is EnvironmentInterface.get_uav_list()[0] else 1
+        target_idx = -1
+        if w_target is not None and w_target is EnvironmentInterface.get_uav_list()[0]:
+            target_idx = 0
+        if w_target is not None and w_target is EnvironmentInterface.get_uav_list()[1]:
+            target_idx = 1
+
 
         temp_uav = self.raw_uavs[uav_id]
         position = temp_uav.get_normalize_position(normal_)
@@ -589,7 +594,7 @@ class MultiUavEnv:
                         self.r_msg[1] += '0号机诱饵了一下，1号机往里飞了'
                         self.r_msg[0] += '0号机诱饵了一下，1号机往里飞了'
                     if current_distance_to_target_1 > last_distance_to_target_1:
-                        self.reward[0] -= 0.3
+                        self.reward[0] += 0.1
                         self.reward[1] -= 0.3
                         self.r_msg[1] += '0号机诱饵了一下，1号机往外飞了'
                         self.r_msg[0] += '0号机诱饵了一下，1号机往外飞了'
@@ -606,7 +611,7 @@ class MultiUavEnv:
                         self.r_msg[1] += '1号机诱饵了一下，0号机往外飞了'
                         self.r_msg[0] += '1号机诱饵了一下，0号机往外飞了'
                         self.reward[0] -= 0.3
-                        self.reward[1] -= 0.3
+                        self.reward[1] += 0.1
 
                     assert current_distance_to_target_0 != last_distance_to_target_0
 
@@ -646,8 +651,7 @@ class MultiUavEnv:
                 alive_idx = 0 if current_p[0].status == UAVState.ALIVE else 1
                 assert current_p[alive_idx].status == UAVState.ALIVE
                 assert alive_idx in [0, 1]
-                alive_uav = current_p[alive_idx]
-                if alive_uav == 1:
+                if alive_idx == 1:
                     if current_distance_to_target_1 < last_distance_to_target_1:
                         self.reward[1] += 0.1
                         self.r_msg[1] += '1号机距离目标更近了，'
