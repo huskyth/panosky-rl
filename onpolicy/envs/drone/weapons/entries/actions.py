@@ -4,6 +4,7 @@ from onpolicy.envs.drone.weapons.factory.uav_factory import UAVFactory
 from onpolicy.envs.drone.weapons.entries.phalanx.components.track_rader.track_rader_state import *
 from onpolicy.envs.drone.weapons.entries.config.global_config import *
 from onpolicy.utils.math_tool import distance_of_2_point, length_of_vector
+from onpolicy.utils.util import compute_distance
 
 
 class GameManager:
@@ -147,7 +148,9 @@ class TimeStepAction(AbstractAction):
                 temp = None
             else:
                 temp = GameManager.uav_list[i].position
-            logger.info("当前无人机位置为{}".format(temp), is_in_file=False)
+
+            temp_p = GameManager.track_rader.position
+            logger.info(f"当前无人机位置为{temp}, 距离为 {'None' if not temp else compute_distance(temp_p, temp)}", is_in_file=False)
         if GameManager.track_rader.current_target is not None:
             logger.info("当前目标索引为{}".format(GameManager.get_uav_index()))
 

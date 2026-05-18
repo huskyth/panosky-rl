@@ -23,5 +23,5 @@ env = MultiUavEnv(cf=cf, is_debug=True, episode_limit=100, rank=0)
 import numpy as np
 
 env.reset()
-while not env.is_terminal[0]:
+while not (env.is_terminal[0] and env.is_terminal[1]):
     env.step(np.array([[0., 0., 0., 0., 1., 0., 0., 0., 0.], [0., 0., 0., 0., 1., 0., 0., 0., 0.]]))

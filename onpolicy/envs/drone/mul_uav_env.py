@@ -580,56 +580,82 @@ class MultiUavEnv:
                 self.dump(msg)
                 return
 
+            c_alive_n = sum([1 for p in current_p if p.status == UAVState.ALIVE])
+            if c_alive_n == 2:
+                if target_idx == 0:
+                    if current_distance_to_target_1 < last_distance_to_target_1:
+                        self.reward[0] += 0.3
+                        self.reward[1] += 0.3
+                        self.r_msg[1] += '0号机诱饵了一下，1号机往里飞了'
+                        self.r_msg[0] += '0号机诱饵了一下，1号机往里飞了'
+                    if current_distance_to_target_1 > last_distance_to_target_1:
+                        self.reward[0] -= 0.3
+                        self.reward[1] -= 0.3
+                        self.r_msg[1] += '0号机诱饵了一下，1号机往外飞了'
+                        self.r_msg[0] += '0号机诱饵了一下，1号机往外飞了'
 
-            if target_idx == 0:
-                if current_distance_to_target_1 < last_distance_to_target_1:
-                    self.reward[0] += 0.3
-                    self.reward[1] += 0.3
-                    self.r_msg[1] += '0号机诱饵了一下，1号机往里飞了'
-                    self.r_msg[0] += '0号机诱饵了一下，1号机往里飞了'
-                if current_distance_to_target_1 > last_distance_to_target_1:
-                    self.reward[0] -= 0.3
-                    self.reward[1] -= 0.3
-                    self.r_msg[1] += '0号机诱饵了一下，1号机往外飞了'
-                    self.r_msg[0] += '0号机诱饵了一下，1号机往外飞了'
+                    assert current_distance_to_target_1 != last_distance_to_target_1
 
-            if target_idx == 1:
-                if current_distance_to_target_0 < last_distance_to_target_0:
-                    self.r_msg[1] += '1号机诱饵了一下，0号机往里飞了，'
-                    self.r_msg[0] += '1号机诱饵了一下，0号机往里飞了，'
-                    self.reward[0] += 0.3
-                    self.reward[1] += 0.3
-                if current_distance_to_target_0 > last_distance_to_target_0:
-                    self.r_msg[1] += '1号机诱饵了一下，0号机往外飞了'
-                    self.r_msg[0] += '1号机诱饵了一下，0号机往外飞了'
-                    self.reward[0] -= 0.3
-                    self.reward[1] -= 0.3
+                if target_idx == 1:
+                    if current_distance_to_target_0 < last_distance_to_target_0:
+                        self.r_msg[1] += '1号机诱饵了一下，0号机往里飞了，'
+                        self.r_msg[0] += '1号机诱饵了一下，0号机往里飞了，'
+                        self.reward[0] += 0.3
+                        self.reward[1] += 0.3
+                    if current_distance_to_target_0 > last_distance_to_target_0:
+                        self.r_msg[1] += '1号机诱饵了一下，0号机往外飞了'
+                        self.r_msg[0] += '1号机诱饵了一下，0号机往外飞了'
+                        self.reward[0] -= 0.3
+                        self.reward[1] -= 0.3
 
-            if target_idx == -1:
-                if current_distance_to_target_0 < last_distance_to_target_0:
-                    self.r_msg[0] += '0号机往里飞了，'
-                    self.reward[0] += 0.3
-                if current_distance_to_target_0 > last_distance_to_target_0:
-                    self.r_msg[0] += '0号机往里外了，'
-                    self.reward[0] -= 0.3
+                    assert current_distance_to_target_0 != last_distance_to_target_0
 
-                if current_distance_to_target_1 < last_distance_to_target_1:
-                    self.reward[1] += 0.3
-                    self.r_msg[1] += '1号机往里飞了，'
 
-                if current_distance_to_target_1 > last_distance_to_target_1:
-                    self.reward[1] -= 0.3
-                    self.r_msg[1] += '1号机往外飞了，'
+                if target_idx == -1:
+                    if current_distance_to_target_0 < last_distance_to_target_0:
+                        self.r_msg[0] += '0号机往里飞了，'
+                        self.reward[0] += 0.3
+                    if current_distance_to_target_0 > last_distance_to_target_0:
+                        self.r_msg[0] += '0号机往外飞了，'
+                        self.reward[0] -= 0.3
 
-                if last_target == 0 and current_p[0].status == UAVState.ALIVE:
-                    self.reward[0] += 0.5
-                    self.r_msg[0] += '目标移除，0号机产生了移除目标的耗时，'
-                    logger.info(f"\033[32m[terminated]：目标移除，0号机产生了移除目标的耗时\033[0m")
+                    if current_distance_to_target_1 < last_distance_to_target_1:
+                        self.reward[1] += 0.3
+                        self.r_msg[1] += '1号机往里飞了，'
 
-                if last_target == 1 and current_p[1].status == UAVState.ALIVE:
-                    self.reward[1] += 0.5
-                    self.r_msg[1] += '目标移除，1号机产生了移除目标的耗时，'
-                    logger.info(f"\033[32m[terminated]：目标移除，1号机产生了移除目标的耗时\033[0m")
+                    if current_distance_to_target_1 > last_distance_to_target_1:
+                        self.reward[1] -= 0.3
+                        self.r_msg[1] += '1号机往外飞了，'
+
+                    if last_target == 0 and current_p[0].status == UAVState.ALIVE:
+                        self.reward[0] += 0.5
+                        self.r_msg[0] += '目标移除，0号机产生了移除目标的耗时，'
+                        logger.info(f"\033[32m[terminated]：目标移除，0号机产生了移除目标的耗时\033[0m")
+                        if current_distance_to_target_1 > last_distance_to_target_1:
+                            self.reward[1] -= 0.8
+                            self.r_msg[1] += '0在切换耗时，1号机却往外飞了，'
+
+                    if last_target == 1 and current_p[1].status == UAVState.ALIVE:
+                        self.reward[1] += 0.5
+                        self.r_msg[1] += '目标移除，1号机产生了移除目标的耗时，'
+                        logger.info(f"\033[32m[terminated]：目标移除，1号机产生了移除目标的耗时\033[0m")
+                        if current_distance_to_target_0 > last_distance_to_target_0:
+                            self.reward[0] -= 0.8
+                            self.r_msg[0] += '1在切换耗时，0号机却往外飞了，'
+            elif c_alive_n == 1:
+                alive_idx = 0 if current_p[0].status == UAVState.ALIVE else 1
+                assert current_p[alive_idx].status == UAVState.ALIVE
+                assert alive_idx in [0, 1]
+                alive_uav = current_p[alive_idx]
+                if alive_uav == 1:
+                    if current_distance_to_target_1 < last_distance_to_target_1:
+                        self.reward[1] += 0.1
+                        self.r_msg[1] += '1号机距离目标更近了，'
+                else:
+                    if current_distance_to_target_0 < last_distance_to_target_0:
+                        self.reward[0] += 0.1
+                        self.r_msg[0] += '0号机距离目标更近了，'
+
 
             if current_p[0].position[2] > 100:
                 self.r_msg[0] += '飞太高，'

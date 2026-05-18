@@ -47,6 +47,7 @@ class TrackRaderState:
     @staticmethod
     @print_wrapper(STATE_TO_STRING[TrackStateEnum.FIRE])
     def set_fire_state():
+        logger.info(f"状态转化过程：{TrackRaderState.current_state} -> {TrackStateEnum.FIRE}")
         TrackRaderState.current_state = TrackStateEnum.FIRE
 
     @staticmethod
