@@ -266,7 +266,7 @@ class TrackRader(Rader):
         logger.info("uav_position = {}, self.position = {},distance_variation = {}".format(uav_position, self.position,
                                                                                            distance_variation))
         if distance == 0: return Inf
-        return 1 / distance
+        return distance_variation / distance
 
     def _cal_projection_velocity(self, single_uav):
         '''
@@ -274,8 +274,9 @@ class TrackRader(Rader):
         '''
         uav_velocity, uav_velocity_direction, uav_position = single_uav.velocity, single_uav.velocity_direction, single_uav.position
         track_2_uav_vector = normalize(subtraction_of_2_vector(self.position, uav_position))
-        logger.info("uav_velocity = {}, uav_velocity_direction = {},track_2_uav_vector = {}".format(uav_velocity,
-                                                                                                    uav_velocity_direction,
-                                                                                                    track_2_uav_vector))
-        return abs(
+
+        v_ = abs(
             dot_of_2_vector(track_2_uav_vector, scalar_mul_vector(uav_velocity, normalize(uav_velocity_direction))))
+        logger.info(
+            f"投影速度为 {v_}, uav_velocity = {uav_velocity}, uav_velocity_direction = {uav_velocity_direction},track_2_uav_vector = {track_2_uav_vector}")
+        return v_
