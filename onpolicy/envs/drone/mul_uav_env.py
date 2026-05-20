@@ -258,6 +258,7 @@ class MultiUavEnv:
             init_vel = self._init_toward_velocity([uav_x, uav_y, uav_z], self.target)
             temp_uav = TrainUAV(uav_x, uav_y, uav_z, *init_vel, AttackState.SAFE, UAVState.ALIVE)
             self.raw_uavs.append(temp_uav)
+
         # 把无人机总数量、UAV初始位置、武器初始位置传给游戏
         if self.is_use_weapon:
             EnvironmentInterface.reset(self.n_total_uavs, self.weapon,
@@ -529,18 +530,25 @@ class MultiUavEnv:
                     self.r_msg[idx] = f'你{idx}撞在了地上要扣4分，'
 
             # 诱饵机奖励
-            self.reward[0] += math.e ** (-abs(1500 - current_distance_to_weapon_0) / 1500)
-            self.r_msg[0] += f'诱饵机距离奖励 {math.e ** (-abs(1500 - current_distance_to_weapon_0) / 1500)}，'
+
+            if self.degree[0] <= self.degree[1]:
+                for i in range(self.n_total_uavs):
+                    self.reward[i] -= 6
+                    self.r_msg[i] += f'0的威胁程度太小'
+            else:
+                for i in range(self.n_total_uavs):
+                    self.reward[i] += 6
+                    self.r_msg[i] += f'0的威胁程度大了，'
 
             if target_idx == 0 and current_p[0].status == UAVState.ALIVE:
-                self.reward[0] += 1.5
+                self.reward[0] += 7.5
                 self.r_msg[0] += '我0掩护你，'
             else:
                 if target_idx == 1:
-                    self.reward[0] -= 1.6
+                    self.reward[0] -= 2.6
                     self.r_msg[0] += '我0掩护你失败-1.6，'
                 if current_p[0].status != UAVState.ALIVE:
-                    self.reward[0] -= 3
+                    self.reward[0] -= 7
                     self.r_msg[0] += '我0被击毁了，'
                     self.is_terminal[0] = True
 

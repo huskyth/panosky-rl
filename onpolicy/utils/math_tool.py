@@ -276,8 +276,7 @@ def cal_projection_velocity(weapon_position, uav_velocity, uav_velocity_directio
     '''
     track_2_uav_vector = normalize(subtraction_of_2_vector(weapon_position, uav_position))
 
-    v_ = abs(
-        dot_of_2_vector(track_2_uav_vector, scalar_mul_vector(uav_velocity, normalize(uav_velocity_direction))))
+    v_ = dot_of_2_vector(track_2_uav_vector, scalar_mul_vector(uav_velocity, normalize(uav_velocity_direction)))
     logger.info(
         f"投影速度为 {v_}, uav_velocity = {uav_velocity}, uav_velocity_direction = {uav_velocity_direction},track_2_uav_vector = {track_2_uav_vector}")
     return v_
