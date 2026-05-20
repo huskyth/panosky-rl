@@ -467,7 +467,6 @@ class MultiUavEnv:
         """
         # TODO://待检查，诱饵机奖励
         current_p = self.raw_uavs
-
         if self.is_use_weapon:
             self.reward = [-0.01 for _ in range(self.n_total_uavs)]
             self.r_msg = ['', '']
@@ -506,7 +505,7 @@ class MultiUavEnv:
                 return
 
             if current_p[1].status != UAVState.ALIVE:
-                self.reward = [-5 for _ in range(self.n_total_uavs)]
+                self.reward = [-10 for _ in range(self.n_total_uavs)]
                 self.r_msg = ['你两任务失败' for _ in range(self.n_total_uavs)]
                 msg = f'任务机败亡-（总共 {self._episode_steps}, 奖励为 {self.reward}）任务机状态为：{current_p[0].status.value, current_p[1].status.value}'
                 msg += f'-奖励-{self.reward}'
@@ -520,20 +519,20 @@ class MultiUavEnv:
 
             for idx, is_coll in enumerate(is_collision):
                 if is_coll:
-                    self.reward[idx] -= -10
-                    self.r_msg[idx] = f'你{idx}撞在了地上要扣分，'
+                    self.reward[idx] -= 12
+                    self.r_msg[idx] = f'你{idx}撞在了地上要扣4分，'
 
             # 诱饵机奖励
             self.reward[0] += math.e ** (-abs(1500 - current_distance_to_weapon_0) / 1500)
             self.r_msg[0] += f'诱饵机距离奖励 {math.e ** (-abs(1500 - current_distance_to_weapon_0) / 1500)}，'
 
             if target_idx == 0 and current_p[0].status == UAVState.ALIVE:
-                self.reward[0] += 0.5
+                self.reward[0] += 1.5
                 self.r_msg[0] += '我0掩护你，'
             else:
                 if target_idx == 1:
-                    self.reward[0] -= 0.6
-                    self.r_msg[0] += '我0掩护你失败，'
+                    self.reward[0] -= 1.6
+                    self.r_msg[0] += '我0掩护你失败-1.6，'
                 if current_p[0].status != UAVState.ALIVE:
                     self.reward[0] -= 3
                     self.r_msg[0] += '我0被击毁了，'
@@ -546,25 +545,25 @@ class MultiUavEnv:
                 1] += f'主攻机距离奖励 {math.e ** (-(current_distance_to_target_1 - last_distance_to_target_1) / self.uav_velocity_value)}，'
             x, y, z = current_p[1].position
             if target_idx == 1:
-                self.reward[1] -= 0.5
-                self.r_msg[1] += '我1不能作为目标，'
+                self.reward[1] -= 1.5
+                self.r_msg[1] += '我1不能作为目标-1.5，'
             hm = self.map.search_nh(x, y)
             det = z - hm
             before = self.reward[1]
             if det > 100:
-                self.reward[1] -= 0.3
+                self.reward[1] -= 1.3
                 self.r_msg[1] += '飞太高了，'
             elif 100 >= det > 50:
-                self.reward[1] += 0.2
+                self.reward[1] += 1.2
                 self.r_msg[1] += '贴地飞行'
             else:
-                self.reward[1] -= 0.4
+                self.reward[1] -= 1.4
                 self.r_msg[1] += '飞太低'
 
             self.r_msg[1] += f'高度奖励 {self.reward[1] - before}，'
             if self.map.judge_mountain(*self.weapon, *current_p[1].position, 0, 'block'):
-                self.reward[1] += 0.2
-                self.r_msg[1] += '被山遮挡奖励0.2，'
+                self.reward[1] += 1.2
+                self.r_msg[1] += '被山遮挡奖励1.2，'
 
             # logger.info(f"奖励情况为 {self.reward} {self._episode_steps, self.is_terminal, self.r_msg}")
 
@@ -595,7 +594,7 @@ class MultiUavEnv:
 
         if self._episode_steps >= self.max_episode_steps:
             for i in range(self.n_total_uavs):
-                self.reward[i] = -1
+                self.reward[i] = -8
             self.r_msg[0] += '步子到了。'
             self.r_msg[1] += '步子到了。'
             msg = f'{self._episode_steps} step：超出最大步数限制， 碰撞情况为 {is_collision}'
