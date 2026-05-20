@@ -1,6 +1,12 @@
 import random
 from math import cos, sin, sqrt, pi, asin, acos, ceil
+
+from numpy import Inf
+
 from onpolicy.envs.drone.weapons.entries.config.global_config import GameConfig
+from onpolicy.utils.format_logger import AppLogger
+
+logger = AppLogger().get_logger()
 
 
 def set_seed(seed):
@@ -264,16 +270,23 @@ def fly_from_9_selections(vertical_radian, horizontal_radian, velocity, horizont
     return current_position, after_rotate_velocity_direction_in_parent, after_rotate_horizontal_right_vector_in_parent
 
 
-if __name__ == '__main__':
-    position = [0, 0, 0]
-    velocity = [0, 4, 3]
-    right = [
-        0, 1, 0]
-    current_position, after_rotate_velocity_direction_in_parent, after_rotate_horizontal_right_vector_in_parent = fly_from_9_selections(
-        0, 0, velocity, right, position)
-    print("距离为{},当前位置：{}，速度方向：{}，水平向右方向：{}".format(
-        distance_of_2_point(current_position, position),
-        current_position,
-        after_rotate_velocity_direction_in_parent,
-        after_rotate_horizontal_right_vector_in_parent))
-    print(f"{length_of_vector(after_rotate_velocity_direction_in_parent)}")
+def cal_projection_velocity(weapon_position, uav_velocity, uav_velocity_direction, uav_position):
+    '''
+    :return: 计算投影速度
+    '''
+    track_2_uav_vector = normalize(subtraction_of_2_vector(weapon_position, uav_position))
+
+    v_ = abs(
+        dot_of_2_vector(track_2_uav_vector, scalar_mul_vector(uav_velocity, normalize(uav_velocity_direction))))
+    logger.info(
+        f"投影速度为 {v_}, uav_velocity = {uav_velocity}, uav_velocity_direction = {uav_velocity_direction},track_2_uav_vector = {track_2_uav_vector}")
+    return v_
+
+
+def cal_threat_level(weapon_position, uav_velocity, uav_velocity_direction, uav_position):
+    distance = distance_of_2_point(uav_position, weapon_position)
+    distance_variation = cal_projection_velocity(weapon_position, uav_velocity, uav_velocity_direction, uav_position)
+    logger.info("uav_position = {}, self.position = {},distance_variation = {}".format(uav_position, weapon_position,
+                                                                                       distance_variation))
+    if distance == 0: return Inf
+    return distance_variation / distance

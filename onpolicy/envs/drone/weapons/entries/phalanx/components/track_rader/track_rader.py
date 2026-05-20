@@ -260,23 +260,10 @@ class TrackRader(Rader):
         :param single_uav:
         :return: 计算威胁程度
         '''
-        uav_position = single_uav.position
-        distance = distance_of_2_point(uav_position, self.position)
-        distance_variation = self._cal_projection_velocity(single_uav)
-        logger.info("uav_position = {}, self.position = {},distance_variation = {}".format(uav_position, self.position,
-                                                                                           distance_variation))
-        if distance == 0: return Inf
-        return distance_variation / distance
+        return cal_threat_level(self.position, single_uav.velocity, single_uav.velocity_direction, single_uav.position)
 
     def _cal_projection_velocity(self, single_uav):
         '''
         :return: 计算投影速度
         '''
-        uav_velocity, uav_velocity_direction, uav_position = single_uav.velocity, single_uav.velocity_direction, single_uav.position
-        track_2_uav_vector = normalize(subtraction_of_2_vector(self.position, uav_position))
-
-        v_ = abs(
-            dot_of_2_vector(track_2_uav_vector, scalar_mul_vector(uav_velocity, normalize(uav_velocity_direction))))
-        logger.info(
-            f"投影速度为 {v_}, uav_velocity = {uav_velocity}, uav_velocity_direction = {uav_velocity_direction},track_2_uav_vector = {track_2_uav_vector}")
-        return v_
+        return cal_projection_velocity(single_uav, self.position)

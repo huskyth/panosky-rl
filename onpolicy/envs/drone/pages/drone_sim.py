@@ -86,9 +86,14 @@ def main():
             drones = []
             reward = step_info['reward']
             r_msg = step_info.get('r_msg', "Not set")
+            deg = step_info.get('degree', "Not set")
             print(f"📌 == 【Step】{step}" + '=' * 150)
             r_msg = '\n'.join(r_msg)
-            print(f"当前目标为 {step_info['c_target_id']}, 各自奖励为 {reward}，奖励描述为: \n {r_msg}")
+            deg = [str(f) for f in deg]
+            deg = '\n'.join(deg)
+            print(f"当前目标为 {step_info['c_target_id']},  各自奖励为 {reward}，奖励描述为: \n {r_msg}")
+            print(f'威胁程度为 {deg}')
+
             pos_0 = None
             dis = None
             for idx, uva in enumerate(uva_state_list):
@@ -110,7 +115,7 @@ def main():
                     "speed": 11.414917009282588,
                     "battery": 97.85000000000012,
                     "aimX": map.for_html(wx, wy)[0],
-                    "aimY": step*2,
+                    "aimY": step * 2,
                     "aimZ": map.for_html(wx, wy)[1],
                 })
             print(f"两机距离为 {dis}")

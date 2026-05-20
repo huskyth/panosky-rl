@@ -15,7 +15,8 @@ from onpolicy.utils.util import compute_distance
 from onpolicy.envs.drone.uav_meta_info import TrainUAV
 from pathlib import Path
 from onpolicy.envs.drone.weapons.interfaces.environment_interface import EnvironmentInterface
-from onpolicy.utils.math_tool import fly_from_9_selections, angle_2_radian, length_of_vector, normalize
+from onpolicy.utils.math_tool import fly_from_9_selections, angle_2_radian, length_of_vector, normalize, \
+    cal_threat_level
 
 warnings.filterwarnings('ignore')
 logger = AppLogger().get_logger()
@@ -440,7 +441,7 @@ class MultiUavEnv:
         data_save = {"uva_state": [x.to_dict() for x in self.raw_uavs], "uva_actions": action.tolist(),
                      "_episode_steps": self._episode_steps, "reward": self.reward,
                      "c_target_id": id(self.raw_uavs[which_idx]) if which_idx is not None else "None",
-                     'r_msg': self.r_msg
+                     'r_msg': self.r_msg, 'degree': self.degree
                      }
         self.episode_data.append(data_save)
 
@@ -470,6 +471,11 @@ class MultiUavEnv:
         if self.is_use_weapon:
             self.reward = [-0.01 for _ in range(self.n_total_uavs)]
             self.r_msg = ['', '']
+            self.degree = [None, None]
+            for i in range(self.n_total_uavs):
+                deg = cal_threat_level(self.weapon, self.uav_velocity_value,
+                                       current_p[i].velocity, current_p[i].position)
+                self.degree[i] = deg
             assert self.n_total_uavs == 2
 
             current_distance_to_target_1 = compute_distance(current_p[1].position, self.target)
