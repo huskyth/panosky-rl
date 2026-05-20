@@ -179,6 +179,44 @@ class MultiUavEnv:
             f"PID-{os.getpid()}, 【{'训练' if self.mode == 'train' else '评估'}】环境（武器位置已知）初始化完成，"
             f"任务机数量为{self.n_task_uavs}，诱饵机数量为{self.n_decoy_uavs}，是否使用武器【{self.is_use_weapon}】")
 
+    def _init_xyz(self):
+        available = False
+
+        # 目标点坐标
+        target_x, target_y, target_z = self.target[0], self.target[1], self.target[2]
+        uav_x, uav_y = 0, 0
+        while not available:
+            # 1. 固定高度
+            uav_z = self.uva_init_height
+
+            # 2. 安全高度校验（不满足直接跳过，重新生成）
+            min_safe_z = float(self.map.search_nh(uav_x, uav_y) + 2 * self.coll_safe_dis)
+            assert uav_z > min_safe_z
+
+            # 3. 计算垂直高度差
+            dz = uav_z - target_z
+
+            r = random.uniform(self.dis_target_uav_min, self.dis_target_uav_max)
+            # 4. 勾股定理计算 必须的水平距离（保证3D距离严格固定）
+            # 水平距离² + 垂直距离² = 固定3D距离²
+            horizontal_sq = r ** 2 - dz ** 2
+            # 防止高度差超过3D距离导致无实数解
+            if horizontal_sq < 0:
+                continue
+            horizontal_r = math.sqrt(horizontal_sq)
+
+            # 5. 随机水平角度（0~2π），保证在目标点周围均匀生成
+            angle = random.uniform(0, 2 * math.pi)
+
+            # 6. 计算固定水平距离的坐标（核心！）
+            uav_x = target_x + horizontal_r * math.cos(angle)
+            uav_y = target_y + horizontal_r * math.sin(angle)
+
+            # 7. 判断位置是否可用
+            available = self.judge_random_position_available(uav_x, uav_y, uav_z)
+
+        return uav_x, uav_y, uav_z
+
     def reset(self, tar_pos=None, wea_pos=None, uav_pos=None):
         """
         每个UAV的状态包含 [x, y, z, v_x, v_y, v_z, decoy_flag, attacked_state, status]
@@ -214,72 +252,11 @@ class MultiUavEnv:
         self.weapon[2] = float(self.map.search_nh(self.weapon[0], self.weapon[1]) + self.coll_safe_dis)
         # 你的循环代码（已修改为 3D 真实距离）
         for uav in range(self.n_total_uavs):
-            uav_x = 0.0
-            uav_y = 0.0
-            uav_z = 0.0
-            available = False
-
-            # 目标点坐标（确保是3维）
-            target_x, target_y, target_z = self.target[0], self.target[1], self.target[2]
-
-            while not available:
-                # --------------------------
-                # 步骤1：随机生成 严格3D距离 r
-                # --------------------------
-                r = random.uniform(self.dis_target_uav_min, self.dis_target_uav_max)
-
-                # --------------------------
-                # 步骤2：先生成随机方向向量 (dx, dy, dz)
-                # --------------------------
-                dx = random.uniform(-1, 1)
-                dy = random.uniform(-1, 1)
-                dz = random.uniform(-1, 1)
-
-                # --------------------------
-                # 步骤3：归一化向量 → 长度=1
-                # --------------------------
-                norm = math.sqrt(dx ** 2 + dy ** 2 + dz ** 2)
-                dx_norm = dx / norm
-                dy_norm = dy / norm
-                dz_norm = dz / norm
-
-                # --------------------------
-                # 步骤4：缩放为 严格3D距离 = r
-                # --------------------------
-                uav_x = target_x + r * dx_norm
-                uav_y = target_y + r * dy_norm
-                uav_z = target_z + r * dz_norm
-
-                # --------------------------
-                # 步骤5：应用你的安全高度限制（关键！限制后重新校准距离）
-                # --------------------------
-                # 最低安全高度（地面+安全距离）
-                min_safe_z = float(self.map.search_nh(uav_x, uav_y) + 2 * self.coll_safe_dis)
-                # 无人机最低初始高度
-                min_z_limit = max(self.uva_init_height, min_safe_z)
-
-                # 如果当前高度低于限制 → 抬高到最低高度，然后重新校准3D距离
-                if uav_z < min_z_limit:
-                    uav_z = min_z_limit
-
-                    # 重新计算水平分量，保证 3D 距离 严格 = r
-                    dz_new = uav_z - target_z
-                    remaining_2d = math.sqrt(r ** 2 - dz_new ** 2)
-
-                    # 归一化水平方向
-                    xy_norm = math.sqrt(dx_norm ** 2 + dy_norm ** 2)
-                    uav_x = target_x + remaining_2d * (dx_norm / xy_norm)
-                    uav_y = target_y + remaining_2d * (dy_norm / xy_norm)
-
-                # --------------------------
-                # 步骤6：判断位置是否可用
-                # --------------------------
-                available = self.judge_random_position_available(uav_x, uav_y, uav_z)
             # 初始化速度（原有逻辑）
+            uav_x, uav_y, uav_z = self._init_xyz()
             init_vel = self._init_toward_velocity([uav_x, uav_y, uav_z], self.target)
             temp_uav = TrainUAV(uav_x, uav_y, uav_z, *init_vel, AttackState.SAFE, UAVState.ALIVE)
             self.raw_uavs.append(temp_uav)
-
         # 把无人机总数量、UAV初始位置、武器初始位置传给游戏
         if self.is_use_weapon:
             EnvironmentInterface.reset(self.n_total_uavs, self.weapon,
@@ -565,8 +542,8 @@ class MultiUavEnv:
             # 主攻机奖励
             self.reward[1] += math.e ** (
                     -(current_distance_to_target_1 - last_distance_to_target_1) / self.uav_velocity_value)
-            self.r_msg[1] += f'主攻机距离奖励 {math.e ** (
-                    -(current_distance_to_target_1 - last_distance_to_target_1) / self.uav_velocity_value)}，'
+            self.r_msg[
+                1] += f'主攻机距离奖励 {math.e ** (-(current_distance_to_target_1 - last_distance_to_target_1) / self.uav_velocity_value)}，'
             x, y, z = current_p[1].position
             if target_idx == 1:
                 self.reward[1] -= 0.5
