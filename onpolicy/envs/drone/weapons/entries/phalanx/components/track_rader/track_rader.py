@@ -169,7 +169,7 @@ class TrackRader(Rader):
             if max_threat_level < entry[0] and not is_block and is_in:
                 max_threat_level = entry[0]
                 self.current_target = entry[1]
-        if max_threat_level > GameConfig.THREAT_LEVEL_THRESHOLD:
+        if True:
             logger.info("找到了最大威胁程度大于阈值 " + str(
 
                 GameConfig.THREAT_LEVEL_THRESHOLD) + "的无人机：" + self.current_target.print_self())

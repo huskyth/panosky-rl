@@ -500,7 +500,7 @@ class MultiUavEnv:
             if current_distance_to_target_1 <= self.task_success_radius and current_p[
                 1].status == UAVState.ALIVE:
                 self.is_terminal = [True for _ in range(self.n_total_uavs)]
-                self.reward = [10 for _ in range(self.n_total_uavs)]
+                self.reward = [100 for _ in range(self.n_total_uavs)]
                 self.r_msg = ['你两协作完成了任务' for _ in range(self.n_total_uavs)]
                 logger.info(
                     f"PID-{os.getpid()}, mode-{self.mode}, episode-{self.n_episode}, \033[32m[terminated]："
@@ -539,6 +539,13 @@ class MultiUavEnv:
                 for i in range(self.n_total_uavs):
                     self.reward[i] += 6
                     self.r_msg[i] += f'0的威胁程度大了，'
+
+                if current_distance_to_target_1 >= last_distance_to_target_1:
+                    self.r_msg[1] += '0威胁程度大你就不该往外飞-12，'
+                    self.reward[1] -= 12
+                else:
+                    self.r_msg[1] += '0威胁程度大你就该往里飞+12，'
+                    self.reward[1] += 12
 
             if target_idx == 0 and current_p[0].status == UAVState.ALIVE:
                 self.reward[0] += 7.5
