@@ -6,7 +6,6 @@ import warnings
 
 import os
 import numpy as np
-import torch
 from gym import spaces
 from onpolicy.utils.format_logger import AppLogger
 from onpolicy.envs.drone.weapons.entries.uav.uav_enum import UAVState, AttackState
@@ -15,8 +14,7 @@ from onpolicy.utils.util import compute_distance
 from onpolicy.envs.drone.uav_meta_info import TrainUAV
 from pathlib import Path
 from onpolicy.envs.drone.weapons.interfaces.environment_interface import EnvironmentInterface
-from onpolicy.utils.math_tool import fly_from_9_selections, angle_2_radian, length_of_vector, normalize, \
-    cal_threat_level
+from onpolicy.utils.math_tool import fly_from_9_selections, angle_2_radian, normalize, cal_threat_level
 
 warnings.filterwarnings('ignore')
 logger = AppLogger().get_logger()
@@ -218,7 +216,7 @@ class MultiUavEnv:
 
         return uav_x, uav_y, uav_z
 
-    def reset(self, tar_pos=None, wea_pos=None, uav_pos=None):
+    def reset(self):
         """
         每个UAV的状态包含 [x, y, z, v_x, v_y, v_z, decoy_flag, attacked_state, status]
         decoy_flag表示无人机是否为诱饵机，诱饵机为1，任务机为2
@@ -264,12 +262,7 @@ class MultiUavEnv:
             EnvironmentInterface.reset(self.n_total_uavs, self.weapon,
                                        [self.raw_uavs[i].velocity for i in range(self.n_total_uavs)],
                                        [self.raw_uavs[i].position for i in range(self.n_total_uavs)], self.map)
-        c_target = EnvironmentInterface.try_get_current_target()
-        which_idx = None
-        for i, x in enumerate(EnvironmentInterface.get_uav_list()):
-            if x is c_target and c_target is not None:
-                which_idx = i
-                break
+        which_idx = self._get_game_target_idx()
         data_save = {"uva_state": [x.to_dict() for x in self.raw_uavs],
                      "uva_actions": [-1 for _ in range(self.n_total_uavs)],
                      "_episode_steps": self._episode_steps, "reward": self.reward,
@@ -312,51 +305,55 @@ class MultiUavEnv:
 
     def get_observation_of_a_uav(self, uav_id):
         """
-            uav_id == 0 为牺牲机
+            uav_id前一半为牺牲机，后一半为攻击机
         """
         assert self.is_use_weapon is True
-        assert self.n_total_uavs == 2
         normal_ = np.array([self.map.map_max_x, self.map.map_max_y, self.max_available_height])
         # 友军的位置和速度、受攻击状态
         # TODO://待检查，友军和武器有关，观测半径可以后续再加
+
         position = self.raw_uavs[uav_id].position
         map_obs = self.map.generate_img(position[0], position[1])[0][0]
 
         team = []
 
-        w_target = EnvironmentInterface.try_get_current_target()
-        target_idx = -1
-        if w_target is not None and w_target is EnvironmentInterface.get_uav_list()[0]:
-            target_idx = 0
-        if w_target is not None and w_target is EnvironmentInterface.get_uav_list()[1]:
-            target_idx = 1
+        target_idx = self._get_game_target_idx()
 
         temp_uav = self.raw_uavs[uav_id]
-        position = temp_uav.get_normalize_position(normal_)
-        velocity = temp_uav.get_normalize_velocity()
-        right_vector = normalize(self.right_vector[uav_id])
+        position = temp_uav.position
+        velocity = temp_uav.velocity
+        right_vector = self.right_vector[uav_id]
         team += position
         team += velocity
         team += right_vector
-        team += [1 - uav_id]  # 1 - 索引代表 0号机为诱饵机，1号机为主攻机，值为1取真，即是诱饵机
+        team += [1 - uav_id]  # (1 - 索引代表) 0号机为诱饵机，1号机为主攻机，值为1取真，即是诱饵机
         for i in range(self.n_total_uavs):
             if i == uav_id:
                 continue
             # 本机位置和速度
             temp_uav = self.raw_uavs[i]
-            position = temp_uav.get_normalize_position(normal_)
-            velocity = temp_uav.get_normalize_velocity()
-            right_vector = normalize(self.right_vector[i])
+            position = temp_uav.position
+            velocity = temp_uav.velocity
+            right_vector = self.right_vector[i]
             team += position
             team += velocity
             team += right_vector
             team += [1 - i]
 
-        weapon = (np.array(self.weapon) / normal_).tolist()
-        target = (np.array(self.target) / normal_).tolist()
+        weapon = self.weapon
+        target = self.target
         team += weapon
         team += target
         return team, [map_obs]
+
+    def _get_game_target_idx(self):
+        c_target = EnvironmentInterface.try_get_current_target()
+        if c_target is None:
+            return -1
+        for i in range(self.n_total_uavs):
+            if c_target is EnvironmentInterface.get_uav_list()[i]:
+                return i
+        assert False
 
     def step(self, action):
         # 输入动作先转换为两个离散动作
@@ -370,7 +367,6 @@ class MultiUavEnv:
         # 获取执行动作前的UAV集群观测
         last_state = copy.deepcopy(self.raw_uavs)
         # 计算每架UAV执行动作后的速度、位置、碰撞情况以及与武器之间是否存在山体遮挡
-        is_collision = [False for _ in range(self.n_total_uavs)]
         for idx in range(self.n_total_uavs):
             if self.raw_uavs[idx].status != UAVState.ALIVE:
                 continue
@@ -387,57 +383,34 @@ class MultiUavEnv:
             actual_velocity = (np.array(after_rotate_velocity_direction_in_parent) * self.uav_velocity_value).tolist()
             self.right_vector[idx] = after_rotate_horizontal_right_vector_in_parent
             # 判断是否会发生碰撞
-            is_con = self.judge_uav_collision_and_set(idx, *next_position)
-            is_collision[idx] = is_con
+            self.judge_uav_collision_and_set(idx, *next_position)
             # 执行动作改变UAV状态
             self.raw_uavs[idx].set_position(*next_position)
             self.raw_uavs[idx].set_velocity(*actual_velocity)
         self._episode_steps += 1  # 当前的回合数增加上动作执行的回合数。
 
-        if any(is_collision):
-
-            for i in range(len(is_collision)):
-                if is_collision[i]:
-                    self.raw_uavs[i] = last_state[i]
-
         # 把位置传给游戏，然后获取执行动作后的受击状态并保存
+        target_idx_before = None
         # TODO://待检查，先注释，训练完成了再解开
         if self.is_use_weapon:
             position = [self.raw_uavs[u].position for u in range(self.n_total_uavs)]
             velocity = [self.raw_uavs[u].velocity for u in range(self.n_total_uavs)]
-            target_idx = -1
-            c_target = EnvironmentInterface.try_get_current_target()
-            if c_target is not None and c_target is EnvironmentInterface.get_uav_list()[0]:
-                target_idx = 0
-
-            if c_target is not None and c_target is EnvironmentInterface.get_uav_list()[1]:
-                target_idx = 1
+            target_idx_before = self._get_game_target_idx()
 
             game_uav_list = EnvironmentInterface.step(position, velocity)
             for u in range(self.n_total_uavs):
                 if game_uav_list[u] is None:
-                    self.raw_uavs[u].is_attacked_state = AttackState.DESTROYED
-                    self.raw_uavs[u].status = UAVState.DESTROYED
-                else:
-                    self.raw_uavs[u].is_attacked_state = game_uav_list[u].get_attacked_state()
-
-                if self.raw_uavs[u].is_attacked_state == AttackState.DESTROYED:
                     self.raw_uavs[u].status = UAVState.DESTROYED
 
         # 计算奖励值和终止符号
-        self.set_reward(last_state, is_collision, action, target_idx)
+        self.set_reward(last_state, action, target_idx_before)
 
         ret_reward = [[x] for x in self.reward]
         return self.get_state_of_all_uav(), ret_reward, self.is_terminal, [self.raw_uavs[i].status.value for i in
                                                                            range(self.n_total_uavs)]
 
     def append_data(self, action):
-        c_target = EnvironmentInterface.try_get_current_target()
-        which_idx = None
-        for i, x in enumerate(EnvironmentInterface.get_uav_list()):
-            if x is c_target and c_target is not None:
-                which_idx = i
-                break
+        which_idx = self._get_game_target_idx()
 
         data_save = {"uva_state": [x.to_dict() for x in self.raw_uavs], "uva_actions": action.tolist(),
                      "_episode_steps": self._episode_steps, "reward": self.reward,
@@ -447,27 +420,27 @@ class MultiUavEnv:
         self.episode_data.append(data_save)
 
     def judge_uav_collision_and_set(self, current_uav_idx, next_x, nex_y, next_z):
-        is_collision = False
-        p_x, p_y, p_z = self.raw_uavs[current_uav_idx].position
+        cur_uav = self.raw_uavs[current_uav_idx]
+        p_x, p_y, p_z = cur_uav.position
         # 判断是否与地面发生碰撞
         if self.map.judge_mountain(p_x, p_y, p_z, next_x, nex_y, next_z, self.coll_safe_dis, 'ground'):
             # 如果路径中碰撞也算
-            is_collision = True
+            cur_uav.status = UAVState.COLLISION
 
         # 判断是否超界
         if (
                 next_x < self.map.map_min_x or next_x > self.map.map_max_x or nex_y < self.map.map_min_y or nex_y > self.map.map_max_y
                 or next_z < self.min_available_height or next_z > self.max_available_height):
-            is_collision = True
-        return is_collision
+            cur_uav.status = UAVState.COLLISION
 
-    def set_reward(self, last_p, is_collision, action, last_target):
+    def set_reward(self, last_p, action, last_target):
         # TODO://待检查
         """
             UAV_0牺牲机
             UAV_1主机
         """
         # TODO://待检查，诱饵机奖励
+        assert last_target is not None
         current_p = self.raw_uavs
         if self.is_use_weapon:
             self.reward = [-0.01 for _ in range(self.n_total_uavs)]
@@ -488,14 +461,7 @@ class MultiUavEnv:
             last_distance_to_target_0 = compute_distance(last_p[0].position, self.target)
             last_distance_to_weapon_0 = compute_distance(last_p[0].position, self.weapon)
 
-            c_target = EnvironmentInterface.try_get_current_target()
-
-            target_idx = -1
-            if c_target is not None and c_target is EnvironmentInterface.get_uav_list()[0]:
-                target_idx = 0
-
-            if c_target is not None and c_target is EnvironmentInterface.get_uav_list()[1]:
-                target_idx = 1
+            target_idx = self._get_game_target_idx()
 
             if current_distance_to_target_1 <= self.task_success_radius and current_p[
                 1].status == UAVState.ALIVE:

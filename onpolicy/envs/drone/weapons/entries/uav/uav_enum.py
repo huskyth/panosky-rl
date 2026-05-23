@@ -23,3 +23,4 @@ class AttackState(AbsEnum):
 class UAVState(AbsEnum):
     ALIVE = 'ALIVE'
     DESTROYED = 'DESTROYED'
+    COLLISION = 'COLLISION'
