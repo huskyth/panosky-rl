@@ -112,3 +112,7 @@ class AppLogger:
     # --------------------------------------------------------------------
     def get_logger(self):
         return self
+
+
+def _green_log_str(msg):
+    return f'\033[32m{msg}\033[0m'
