@@ -120,12 +120,12 @@ class MultiUavEnv:
                 "linear": spaces.Box(low=-np.inf, high=+np.inf, shape=(obs_dim,), dtype=np.float32),
 
                 # 2) 图像数据：高/宽/通道（最常用格式 HWC）
-                "image": spaces.Box(
-                    low=0,  # 像素 0~255
-                    high=255,
-                    shape=(1, 32, 32),  # 高84 × 宽84 × 3通道(RGB)
-                    dtype=np.uint8
-                )
+                # "image": spaces.Box(
+                #     low=0,  # 像素 0~255
+                #     high=255,
+                #     shape=(1, 32, 32),  # 高84 × 宽84 × 3通道(RGB)
+                #     dtype=np.uint8
+                # )
             })
             self.observation_space.append(observation_space)
         self.share_observation_space = [
@@ -134,12 +134,12 @@ class MultiUavEnv:
                 "linear": spaces.Box(low=-np.inf, high=+np.inf, shape=(self.n_total_uavs * obs_dim,), dtype=np.float32),
 
                 # 2) 图像数据：高/宽/通道（最常用格式 HWC）
-                "image": spaces.Box(
-                    low=0,  # 像素 0~255
-                    high=255,
-                    shape=(self.n_total_uavs, 32, 32),  # 高84 × 宽84 × 3通道(RGB)
-                    dtype=np.uint8
-                )
+                # "image": spaces.Box(
+                #     low=0,  # 像素 0~255
+                #     high=255,
+                #     shape=(self.n_total_uavs, 32, 32),  # 高84 × 宽84 × 3通道(RGB)
+                #     dtype=np.uint8
+                # )
             })
             for _ in range(self.n_total_uavs)]
 
@@ -321,8 +321,8 @@ class MultiUavEnv:
         # 友军的位置和速度、受攻击状态
         # TODO://待检查，友军和武器有关，观测半径可以后续再加
 
-        position = self.raw_uavs[uav_id].position
-        map_obs = self.map.generate_img(position[0], position[1])[0][0]
+        # position = self.raw_uavs[uav_id].position
+        # map_obs = self.map.generate_img(position[0], position[1])[0][0]
 
         team = []
 
@@ -354,7 +354,7 @@ class MultiUavEnv:
         target = self.target
         team += weapon
         team += target
-        return team, [map_obs]
+        return team, [None]
 
     def _get_game_target_idx(self):
         c_target = EnvironmentInterface.try_get_current_target()
@@ -455,7 +455,7 @@ class MultiUavEnv:
                                        current_p[i].velocity, current_p[i].position)
                 self.degree[i] = deg
 
-                if current_p[i].statue == UAVState.COLLISION:
+                if current_p[i].status == UAVState.COLLISION:
                     self.reward[i] -= 6
                     self.is_terminal[i] = True
                     self.r_msg[i] += f'{i}撞地了-'
@@ -476,27 +476,40 @@ class MultiUavEnv:
                         f" {green_str}，奖励为{self.reward}, 状态为 {current_p[i].status}")
 
                 x, y, z = current_p[i].position
-                hm = self.map.search_nh(x, y)
-                det = z - hm
-                info = f'z={z}，hm={hm}，'
-                self.r_msg[i] = info + self.r_msg[i]
-                if det > 100:
-                    self.reward[i] -= 1
-                    self.r_msg[i] += '飞太高了，'
-                elif 100 >= det > 50:
-                    self.reward[i] += 1
-                    self.r_msg[i] += '贴地飞行,'
-                else:
-                    self.reward[i] -= 1
-                    self.r_msg[i] += '飞太低'
 
-                if self.map.judge_mountain(*self.weapon, *current_p[i].position, 0, 'block'):
-                    self.reward[i] += 1.5
-                    self.r_msg[i] += '被山遮挡，'
+                l_dis = compute_distance(last_p[i].position, self.target)
+                if l_dis >= c_dis:
+                    self.reward[i] += 1
+                    self.r_msg[i] += '你近了，'
+                else:
+                    self.reward[i] += -1
+                    self.r_msg[i] += '你远了，'
+
+                # hm = self.map.search_nh(x, y)
+                # det = z - hm
+                # info = f'z={z}，hm={hm}，'
+                # self.r_msg[i] = info + self.r_msg[i]
+                # if det > 200:
+                #     self.reward[i] -= 1
+                #     self.r_msg[i] += '飞太高了，'
+                # elif 200 >= det > 100:
+                #     self.reward[i] += 1
+                #     self.r_msg[i] += '贴地飞行，'
+                # else:
+                #     self.reward[i] -= 1
+                #     self.r_msg[i] += '飞太低，'
+
+                # if self.map.judge_mountain(*self.weapon, *current_p[i].position, 0, 'block'):
+                #     # TODO://不能在地下
+                #     pass
+                    # self.reward[i] += 1.5
+                    # self.r_msg[i] += '被山遮挡，'
 
             if all(self.is_terminal):
                 self.append_data(action)
                 self.dump("任务结束")
+                logger.info(f"PID-{os.getpid()}, mode-{self.mode}, "
+                            f"episode-{self.n_episode}\033[31m[terminated]：任务结束，结束原因 {self.r_msg}\033[0m")
                 self.n_episode = self.n_episode + 1
                 return
 
