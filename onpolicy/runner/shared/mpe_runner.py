@@ -92,15 +92,15 @@ class MPERunner(Runner):
             share_obs_linear = obs_linear.reshape(self.n_rollout_threads, -1)
             share_obs_linear = np.expand_dims(share_obs_linear, 1).repeat(self.num_agents, axis=1)
 
-            share_obs_img = obs_img.reshape(self.n_rollout_threads, -1)
-            share_obs_img = np.expand_dims(share_obs_img, 1).repeat(self.num_agents, axis=1)
-            share_obs_img = share_obs_img.reshape(
-                *share_obs_img.shape[:-1], *self.buffer.share_obs_shape_image)
+            # share_obs_img = obs_img.reshape(self.n_rollout_threads, -1)
+            # share_obs_img = np.expand_dims(share_obs_img, 1).repeat(self.num_agents, axis=1)
+            # share_obs_img = share_obs_img.reshape(
+            #     *share_obs_img.shape[:-1], *self.buffer.share_obs_shape_image)
 
             self.buffer.share_obs_linear[0] = share_obs_linear.copy()
-            self.buffer.share_obs_image[0] = share_obs_img.copy()
+            # self.buffer.share_obs_image[0] = share_obs_img.copy()
             self.buffer.obs_linear[0] = obs_linear.copy()
-            self.buffer.obs_image[0] = obs_img.copy()
+            # self.buffer.obs_image[0] = obs_img.copy()
         else:
             share_obs = obs
 
@@ -108,13 +108,14 @@ class MPERunner(Runner):
     def collect(self, step):
         self.trainer.prep_rollout()
         value, action, action_log_prob, rnn_states, rnn_states_critic \
-            = self.trainer.policy.get_actions(np.concatenate(self.buffer.share_obs_image[step]),
-                                              np.concatenate(self.buffer.share_obs_linear[step]),
-                                              np.concatenate(self.buffer.obs_image[step]),
-                                              np.concatenate(self.buffer.obs_linear[step]),
-                                              np.concatenate(self.buffer.rnn_states[step]),
-                                              np.concatenate(self.buffer.rnn_states_critic[step]),
-                                              np.concatenate(self.buffer.masks[step]))
+            = self.trainer.policy.get_actions(
+            # np.concatenate(self.buffer.share_obs_image[step]),
+            np.concatenate(self.buffer.share_obs_linear[step]),
+            # np.concatenate(self.buffer.obs_image[step]),
+            np.concatenate(self.buffer.obs_linear[step]),
+            np.concatenate(self.buffer.rnn_states[step]),
+            np.concatenate(self.buffer.rnn_states_critic[step]),
+            np.concatenate(self.buffer.masks[step]))
         # [self.envs, agents, dim]
         values = np.array(np.split(_t2n(value), self.n_rollout_threads))
         actions = np.array(np.split(_t2n(action), self.n_rollout_threads))
@@ -150,11 +151,11 @@ class MPERunner(Runner):
             share_obs_linear = obs_lin.reshape(self.n_rollout_threads, -1)
             share_obs_linear = np.expand_dims(share_obs_linear, 1).repeat(self.num_agents, axis=1)
 
-            share_obs_img = obs_img.reshape(self.n_rollout_threads, -1)
-            share_obs_img = np.expand_dims(share_obs_img, 1).repeat(self.num_agents, axis=1)
-            share_obs_img = share_obs_img.reshape(
-                *share_obs_img.shape[:-1], *self.buffer.share_obs_shape_image)
-            self.buffer.insert(share_obs_img, share_obs_linear, obs_img, obs_lin, rnn_states, rnn_states_critic,
+            # share_obs_img = obs_img.reshape(self.n_rollout_threads, -1)
+            # share_obs_img = np.expand_dims(share_obs_img, 1).repeat(self.num_agents, axis=1)
+            # share_obs_img = share_obs_img.reshape(
+            #     *share_obs_img.shape[:-1], *self.buffer.share_obs_shape_image)
+            self.buffer.insert(share_obs_linear, obs_lin, rnn_states, rnn_states_critic,
                                actions,
                                action_log_probs, values, rewards,
                                masks)

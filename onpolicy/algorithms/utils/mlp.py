@@ -46,7 +46,7 @@ class MLPBase(nn.Module):
         if self._use_feature_normalization:
             self.feature_norm = nn.LayerNorm(obs_dim)
 
-        self.mlp = MLPLayer(obs_dim, self.hidden_size // 2,
+        self.mlp = MLPLayer(obs_dim, self.hidden_size,
                               self._layer_N, self._use_orthogonal, self._use_ReLU)
 
     def forward(self, x):

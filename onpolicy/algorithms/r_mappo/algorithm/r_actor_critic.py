@@ -34,7 +34,7 @@ class R_Actor(nn.Module):
         if isinstance(obs_shape, dict):
             base_cnn = CNNBase
             base_linear = MLPBase
-            self.base_cnn = base_cnn(args, obs_shape['image'])
+            # self.base_cnn = base_cnn(args, obs_shape['image'])
             self.base_linear = base_linear(args, obs_shape['linear'])
         else:
             base = CNNBase if len(obs_shape) == 3 else MLPBase
@@ -48,7 +48,7 @@ class R_Actor(nn.Module):
         self.to(device)
         self.algo = args.algorithm_name
 
-    def forward(self, obs_img, obs_linear, rnn_states, masks, available_actions=None, deterministic=False):
+    def forward(self, obs_linear, rnn_states, masks, available_actions=None, deterministic=False):
         """
         Compute actions from the given inputs.
         :param obs: (np.ndarray / torch.Tensor) observation inputs into network.
@@ -62,24 +62,24 @@ class R_Actor(nn.Module):
         :return action_log_probs: (torch.Tensor) log probabilities of taken actions.
         :return rnn_states: (torch.Tensor) updated RNN hidden states.
         """
-        obs_img = check(obs_img).to(**self.tpdv)
+        # obs_img = check(obs_img).to(**self.tpdv)
         obs_linear = check(obs_linear).to(**self.tpdv)
         rnn_states = check(rnn_states).to(**self.tpdv)
         masks = check(masks).to(**self.tpdv)
         if available_actions is not None:
             available_actions = check(available_actions).to(**self.tpdv)
 
-        actor_features_img = self.base_cnn(obs_img)
+        # actor_features_img = self.base_cnn(obs_img)
         actor_features_lin = self.base_linear(obs_linear)
 
         if self._use_naive_recurrent_policy or self._use_recurrent_policy:
             actor_features, rnn_states = self.rnn(actor_features, rnn_states, masks)
 
-        actions, action_log_probs = self.act(actor_features_img, actor_features_lin, available_actions, deterministic)
+        actions, action_log_probs = self.act(actor_features_lin, available_actions, deterministic)
 
         return actions, action_log_probs, rnn_states
 
-    def evaluate_actions(self, obs_img, obs_lin, rnn_states, action, masks, available_actions=None, active_masks=None):
+    def evaluate_actions(self, obs_lin, rnn_states, action, masks, available_actions=None, active_masks=None):
         """
         Compute log probability and entropy of given actions.
         :param obs: (torch.Tensor) observation inputs into network.
@@ -93,7 +93,7 @@ class R_Actor(nn.Module):
         :return action_log_probs: (torch.Tensor) log probabilities of the input actions.
         :return dist_entropy: (torch.Tensor) action distribution entropy for the given inputs.
         """
-        obs_img = check(obs_img).to(**self.tpdv)
+        # obs_img = check(obs_img).to(**self.tpdv)
         obs_lin = check(obs_lin).to(**self.tpdv)
         rnn_states = check(rnn_states).to(**self.tpdv)
         action = check(action).to(**self.tpdv)
@@ -104,9 +104,9 @@ class R_Actor(nn.Module):
         if active_masks is not None:
             active_masks = check(active_masks).to(**self.tpdv)
 
-        actor_features_cnn = self.base_cnn(obs_img)
+        # actor_features_cnn = self.base_cnn(obs_img)
         actor_features_lin = self.base_linear(obs_lin)
-        actor_features = torch.cat([actor_features_cnn, actor_features_lin], dim=1)
+        actor_features = actor_features_lin
 
         if self._use_naive_recurrent_policy or self._use_recurrent_policy:
             actor_features, rnn_states = self.rnn(actor_features, rnn_states, masks)
@@ -154,7 +154,7 @@ class R_Critic(nn.Module):
         if isinstance(cent_obs_shape, dict):
             base_cnn = CNNBase
             base_linear = MLPBase
-            self.base_cnn = base_cnn(args, cent_obs_shape['image'])
+            # self.base_cnn = base_cnn(args, cent_obs_shape['image'])
             self.base_linear = base_linear(args, cent_obs_shape['linear'])
         else:
             base = CNNBase if len(cent_obs_shape) == 3 else MLPBase
@@ -173,7 +173,7 @@ class R_Critic(nn.Module):
 
         self.to(device)
 
-    def forward(self, cent_obs_image, cent_obs_lin, rnn_states, masks):
+    def forward(self, cent_obs_lin, rnn_states, masks):
         """
         Compute actions from the given inputs.
         :param cent_obs: (np.ndarray / torch.Tensor) observation inputs into network.
@@ -183,16 +183,16 @@ class R_Critic(nn.Module):
         :return values: (torch.Tensor) value function predictions.
         :return rnn_states: (torch.Tensor) updated RNN hidden states.
         """
-        cent_obs_image = check(cent_obs_image).to(**self.tpdv)
+        # cent_obs_image = check(cent_obs_image).to(**self.tpdv)
         cent_obs_lin = check(cent_obs_lin).to(**self.tpdv)
         rnn_states = check(rnn_states).to(**self.tpdv)
         masks = check(masks).to(**self.tpdv)
 
-        critic_features_img = self.base_cnn(cent_obs_image)
+        # critic_features_img = self.base_cnn(cent_obs_image)
         critic_features_lin = self.base_linear(cent_obs_lin)
         if self._use_naive_recurrent_policy or self._use_recurrent_policy:
             critic_features, rnn_states = self.rnn(critic_features, rnn_states, masks)
 
-        critic_features = torch.cat([critic_features_img, critic_features_lin], dim=1)
+        critic_features = critic_features_lin
         values = self.v_out(critic_features)
         return values, rnn_states

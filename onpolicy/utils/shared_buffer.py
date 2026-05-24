@@ -47,11 +47,11 @@ class SharedReplayBuffer(object):
         self.num_agents = num_agents
         ori_obs_space = obs_space
         obs_shape = get_shape_from_obs_space(obs_space)
-        obs_shape_image = obs_shape['image']
+        # obs_shape_image = obs_shape['image']
         obs_shape_linear = obs_shape['linear']
 
         share_obs_shape = get_shape_from_obs_space(cent_obs_space)
-        self.share_obs_shape_image = share_obs_shape['image']
+        # self.share_obs_shape_image = share_obs_shape['image']
         share_obs_shape_linear = share_obs_shape['linear']
         try:
             if type(obs_shape[-1]) == list:
@@ -62,16 +62,16 @@ class SharedReplayBuffer(object):
         except Exception as e:
             logger.info(f"obs_shape、share_obs_shape解析失败，暂时忽略 {e}")
 
-        self.share_obs_image = np.zeros(
-            (self.episode_length + 1, self.n_rollout_threads, num_agents, *self.share_obs_shape_image),
-            dtype=np.float32)
+        # self.share_obs_image = np.zeros(
+        #     (self.episode_length + 1, self.n_rollout_threads, num_agents, *self.share_obs_shape_image),
+        #     dtype=np.float32)
         self.share_obs_linear = np.zeros(
             (self.episode_length + 1, self.n_rollout_threads, num_agents, *share_obs_shape_linear),
             dtype=np.float32)
         self.obs_linear = np.zeros((self.episode_length + 1, self.n_rollout_threads, num_agents, *obs_shape_linear),
                                    dtype=np.float32)
-        self.obs_image = np.zeros((self.episode_length + 1, self.n_rollout_threads, num_agents, *obs_shape_image),
-                                  dtype=np.float32)
+        # self.obs_image = np.zeros((self.episode_length + 1, self.n_rollout_threads, num_agents, *obs_shape_image),
+        #                           dtype=np.float32)
 
         self.rnn_states = np.zeros(
             (self.episode_length + 1, self.n_rollout_threads, num_agents, self.recurrent_N, self.hidden_size),
@@ -105,7 +105,7 @@ class SharedReplayBuffer(object):
 
         self.step = 0
 
-    def insert(self, share_obs_img, share_obs_lin, obs_img, obs_lin, rnn_states_actor, rnn_states_critic, actions,
+    def insert(self, share_obs_lin, obs_lin, rnn_states_actor, rnn_states_critic, actions,
                action_log_probs,
                value_preds, rewards, masks, bad_masks=None, active_masks=None, available_actions=None):
         """
@@ -123,9 +123,9 @@ class SharedReplayBuffer(object):
         :param active_masks: (np.ndarray) denotes whether an agent is active or dead in the env.
         :param available_actions: (np.ndarray) actions available to each agent. If None, all actions are available.
         """
-        self.share_obs_image[self.step + 1] = share_obs_img.copy()
+        # self.share_obs_image[self.step + 1] = share_obs_img.copy()
         self.share_obs_linear[self.step + 1] = share_obs_lin.copy()
-        self.obs_image[self.step + 1] = obs_img.copy()
+        # self.obs_image[self.step + 1] = obs_img.copy()
         self.obs_linear[self.step + 1] = obs_lin.copy()
         self.rnn_states[self.step + 1] = rnn_states_actor.copy()
         self.rnn_states_critic[self.step + 1] = rnn_states_critic.copy()
@@ -180,9 +180,9 @@ class SharedReplayBuffer(object):
 
     def after_update(self):
         """Copy last timestep data to first index. Called after update to model."""
-        self.share_obs_image[0] = self.share_obs_image[-1].copy()
+        # self.share_obs_image[0] = self.share_obs_image[-1].copy()
         self.share_obs_linear[0] = self.share_obs_linear[-1].copy()
-        self.obs_image[0] = self.obs_image[-1].copy()
+        # self.obs_image[0] = self.obs_image[-1].copy()
         self.obs_linear[0] = self.obs_linear[-1].copy()
         self.rnn_states[0] = self.rnn_states[-1].copy()
         self.rnn_states_critic[0] = self.rnn_states_critic[-1].copy()
@@ -383,9 +383,9 @@ class SharedReplayBuffer(object):
         rand = torch.randperm(batch_size).numpy()
         sampler = [rand[i * mini_batch_size:(i + 1) * mini_batch_size] for i in range(num_mini_batch)]
 
-        share_obs_image = self.share_obs_image[:-1].reshape(-1, *self.share_obs_image.shape[3:])
+        # share_obs_image = self.share_obs_image[:-1].reshape(-1, *self.share_obs_image.shape[3:])
         share_obs_linear = self.share_obs_linear[:-1].reshape(-1, *self.share_obs_linear.shape[3:])
-        obs_image = self.obs_image[:-1].reshape(-1, *self.obs_image.shape[3:])
+        # obs_image = self.obs_image[:-1].reshape(-1, *self.obs_image.shape[3:])
         obs_linear = self.obs_linear[:-1].reshape(-1, *self.obs_linear.shape[3:])
         rnn_states = self.rnn_states[:-1].reshape(-1, *self.rnn_states.shape[3:])
         rnn_states_critic = self.rnn_states_critic[:-1].reshape(-1, *self.rnn_states_critic.shape[3:])
@@ -401,9 +401,9 @@ class SharedReplayBuffer(object):
 
         for indices in sampler:
             # obs size [T+1 N M Dim]-->[T N M Dim]-->[T*N*M,Dim]-->[index,Dim]
-            share_obs_img_batch = share_obs_image[indices]
+            # share_obs_img_batch = share_obs_image[indices]
             share_obs_lin_batch = share_obs_linear[indices]
-            obs_image_batch = obs_image[indices]
+            # obs_image_batch = obs_image[indices]
             obs_lin_batch = obs_linear[indices]
             rnn_states_batch = rnn_states[indices]
             rnn_states_critic_batch = rnn_states_critic[indices]
@@ -422,7 +422,7 @@ class SharedReplayBuffer(object):
             else:
                 adv_targ = advantages[indices]
 
-            yield share_obs_img_batch, share_obs_lin_batch, obs_image_batch, obs_lin_batch, rnn_states_batch, rnn_states_critic_batch, actions_batch, \
+            yield share_obs_lin_batch, obs_lin_batch, rnn_states_batch, rnn_states_critic_batch, actions_batch, \
                 value_preds_batch, return_batch, masks_batch, active_masks_batch, old_action_log_probs_batch, \
                 adv_targ, available_actions_batch
 
