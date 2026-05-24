@@ -392,7 +392,7 @@ class MultiUavEnv:
             actual_velocity = (np.array(after_rotate_velocity_direction_in_parent) * self.uav_velocity_value).tolist()
             self.right_vector[idx] = after_rotate_horizontal_right_vector_in_parent
             # 判断是否会发生碰撞
-            self.judge_uav_collision_and_set(idx, *next_position)
+            # self.judge_uav_collision_and_set(idx, *next_position)
             # 执行动作改变UAV状态
             self.raw_uavs[idx].set_position(*next_position)
             self.raw_uavs[idx].set_velocity(*actual_velocity)
@@ -455,10 +455,10 @@ class MultiUavEnv:
                                        current_p[i].velocity, current_p[i].position)
                 self.degree[i] = deg
 
-                if current_p[i].status == UAVState.COLLISION:
-                    self.reward[i] -= 6
-                    self.is_terminal[i] = True
-                    self.r_msg[i] += f'{i}撞地了-'
+                # if current_p[i].status == UAVState.COLLISION:
+                #     self.reward[i] -= 6
+                #     self.is_terminal[i] = True
+                #     self.r_msg[i] += f'{i}撞地了-'
 
                 if current_p[i].status == UAVState.DESTROYED:
                     self.reward[i] -= 5
