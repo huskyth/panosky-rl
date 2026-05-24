@@ -673,7 +673,7 @@ class DummyVecEnv(ShareVecEnv):
     def __init__(self, env_fns):
         self.envs = [fn() for fn in env_fns]
         assert len(self.envs) == 1
-        assert self.envs[0].n_total_uavs == 2
+        # assert self.envs[0].n_total_uavs == 2
         env = self.envs[0]
         ShareVecEnv.__init__(self, len(
             env_fns), env.observation_space, env.share_observation_space, env.action_space)

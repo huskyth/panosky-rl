@@ -464,6 +464,7 @@ class MultiUavEnv:
                     self.reward[i] -= 5
                     self.is_terminal[i] = True
                     self.r_msg[i] += f'{i}被摧毁了-'
+                    assert False
 
                 c_dis = compute_distance(current_p[i].position, self.target)
                 if c_dis <= self.task_success_radius:
@@ -477,13 +478,13 @@ class MultiUavEnv:
 
                 x, y, z = current_p[i].position
 
-                l_dis = compute_distance(last_p[i].position, self.target)
-                if l_dis >= c_dis:
-                    self.reward[i] += 1
-                    self.r_msg[i] += '你近了，'
-                else:
-                    self.reward[i] += -1
-                    self.r_msg[i] += '你远了，'
+                # l_dis = compute_distance(last_p[i].position, self.target)
+                # if l_dis >= c_dis:
+                #     self.reward[i] += 0.1
+                #     self.r_msg[i] += '你近了，'
+                # else:
+                #     self.reward[i] += -0.1
+                #     self.r_msg[i] += '你远了，'
 
                 # hm = self.map.search_nh(x, y)
                 # det = z - hm
@@ -502,25 +503,25 @@ class MultiUavEnv:
                 # if self.map.judge_mountain(*self.weapon, *current_p[i].position, 0, 'block'):
                 #     # TODO://不能在地下
                 #     pass
-                    # self.reward[i] += 1.5
-                    # self.r_msg[i] += '被山遮挡，'
+                # self.reward[i] += 1.5
+                # self.r_msg[i] += '被山遮挡，'
 
             if all(self.is_terminal):
                 self.append_data(action)
                 self.dump("任务结束")
-                logger.info(f"PID-{os.getpid()}, mode-{self.mode}, "
-                            f"episode-{self.n_episode}\033[31m[terminated]：任务结束，结束原因 {self.r_msg}\033[0m")
+                green_str = _green_log_str(f"[terminated]：任务结束，结束原因 {self.r_msg}")
+                logger.info(f"PID-{os.getpid()}, mode-{self.mode}, episode-{self.n_episode} {green_str}")
                 self.n_episode = self.n_episode + 1
                 return
 
-            if self._episode_steps > self.max_episode_steps:
+            if self._episode_steps >= self.max_episode_steps:
                 for i in range(self.n_total_uavs):
                     self.r_msg[i] += '步子到了。'
                 self.n_episode = self.n_episode + 1
                 self.is_terminal = [True for _ in range(self.n_total_uavs)]
                 logger.info(
                     f"PID-{os.getpid()}, mode-{self.mode}, "
-                    f"episode-{self.n_episode}\033[31m[terminated]：超出最大限制\033[0m")
+                    f"episode-{self.n_episode}\033[31m[terminated]：超出最大限制 {self.r_msg}\033[0m")
                 self.append_data(action)
                 self.dump("超出最大限制")
                 return

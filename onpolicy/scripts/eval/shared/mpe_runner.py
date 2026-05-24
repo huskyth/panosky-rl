@@ -38,15 +38,15 @@ class MPERunner(Runner):
             share_obs_linear = obs_linear.reshape(self.n_rollout_threads, -1)
             share_obs_linear = np.expand_dims(share_obs_linear, 1).repeat(self.num_agents, axis=1)
 
-            share_obs_img = obs_img.reshape(self.n_rollout_threads, -1)
-            share_obs_img = np.expand_dims(share_obs_img, 1).repeat(self.num_agents, axis=1)
-            share_obs_img = share_obs_img.reshape(
-                *share_obs_img.shape[:-1], *self.buffer.share_obs_shape_image)
+            # share_obs_img = obs_img.reshape(self.n_rollout_threads, -1)
+            # share_obs_img = np.expand_dims(share_obs_img, 1).repeat(self.num_agents, axis=1)
+            # share_obs_img = share_obs_img.reshape(
+            #     *share_obs_img.shape[:-1], *self.buffer.share_obs_shape_image)
 
             self.buffer.share_obs_linear[0] = share_obs_linear.copy()
-            self.buffer.share_obs_image[0] = share_obs_img.copy()
+            # self.buffer.share_obs_image[0] = share_obs_img.copy()
             self.buffer.obs_linear[0] = obs_linear.copy()
-            self.buffer.obs_image[0] = obs_img.copy()
+            # self.buffer.obs_image[0] = obs_img.copy()
         else:
             share_obs = obs
 
@@ -79,11 +79,11 @@ class MPERunner(Runner):
 
         for eval_step in range(self.episode_length):
             self.trainer.prep_rollout()
-            eval_action, eval_rnn_states = self.trainer.policy.act(np.concatenate(eval_obs_img),
-                                                                   np.concatenate(eval_obs_lin),
-                                                                   np.concatenate(eval_rnn_states),
-                                                                   np.concatenate(eval_masks),
-                                                                   deterministic=True)
+            eval_action, eval_rnn_states = self.trainer.policy.act(
+                np.concatenate(eval_obs_lin),
+                np.concatenate(eval_rnn_states),
+                np.concatenate(eval_masks),
+                deterministic=True)
             eval_actions = np.array(np.split(_t2n(eval_action), self.n_eval_rollout_threads))
             eval_rnn_states = np.array(np.split(_t2n(eval_rnn_states), self.n_eval_rollout_threads))
 

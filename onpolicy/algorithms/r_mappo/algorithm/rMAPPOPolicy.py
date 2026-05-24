@@ -115,7 +115,7 @@ class R_MAPPOPolicy:
         values, _ = self.critic(cent_obs_lin, rnn_states_critic, masks)
         return values, action_log_probs, dist_entropy
 
-    def act(self, obs_img, obs_lin, rnn_states_actor, masks, available_actions=None, deterministic=False):
+    def act(self, obs_lin, rnn_states_actor, masks, available_actions=None, deterministic=False):
         """
         Compute actions using the given inputs.
         :param obs (np.ndarray): local agent inputs to the actor.
@@ -125,6 +125,6 @@ class R_MAPPOPolicy:
                                   (if None, all actions available)
         :param deterministic: (bool) whether the action should be mode of distribution or should be sampled.
         """
-        actions, _, rnn_states_actor = self.actor(obs_img, obs_lin, rnn_states_actor, masks, available_actions,
+        actions, _, rnn_states_actor = self.actor(obs_lin, rnn_states_actor, masks, available_actions,
                                                   deterministic)
         return actions, rnn_states_actor

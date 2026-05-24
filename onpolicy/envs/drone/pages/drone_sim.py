@@ -81,7 +81,7 @@ def main():
         for step_info in episode_path:
             uva_state_list = step_info.get("uva_state", [])
             step = step_info.get("_episode_steps", 0)
-            assert len(uva_state_list) == 2
+            # assert len(uva_state_list) == 2
             # 构造输出给前端的无人机数据
             drones = []
             reward = step_info['reward']
