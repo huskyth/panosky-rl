@@ -427,8 +427,8 @@ class MultiUavEnv:
         self.set_reward(last_state, action, target_idx_before)
 
         ret_reward = [[x] for x in self.reward]
-        return self.get_state_of_all_uav(), ret_reward, self.is_terminal, [self.raw_uavs[i].status.value for i in
-                                                                           range(self.n_total_uavs)]
+        return self.get_state_of_all_uav(), ret_reward, self.is_terminal, {i: {'individual_reward': self.reward[i]} for
+                                                                           i in range(self.n_total_uavs)}
 
     def append_data(self, action):
         which_idx = self._get_game_target_idx()
