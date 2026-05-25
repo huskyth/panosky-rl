@@ -129,20 +129,21 @@ def main(args):
     eval_envs = make_eval_env(all_args)
     num_agents = all_args.num_agents
     all_args.n_rollout_threads = 1
-    all_args.model_dir = r'C:\Users\qq162\Desktop\PanoSky-RL\onpolicy\scripts\train\swanlog\run-20260525_191530-m7skubl2dqahvucixeh5n'
+    all_args.model_dir = r'C:\Users\qq162\Desktop\PanoSky-RL\onpolicy\scripts\train\swanlog\run-20260525_203010-vj2s6qtji8kz00pt0apqz'
     config = {
         "all_args": all_args,
         "eval_envs": eval_envs,
         "num_agents": num_agents,
         "device": device,
-        "run_dir": run_dir
+        "run_dir": run_dir,
+        "is_eval": True
     }
 
     # run experiments
     if all_args.share_policy:
         from onpolicy.scripts.eval.shared.mpe_runner import MPERunner as Runner
     else:
-        from onpolicy.scripts.eval.separated.mpe_runner import MPERunner as Runner
+        from onpolicy.runner.separated.mpe_runner import MPERunner as Runner
 
     runner = Runner(config)
     runner.run()

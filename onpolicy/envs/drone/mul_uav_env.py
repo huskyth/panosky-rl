@@ -424,7 +424,7 @@ class MultiUavEnv:
                     self.raw_uavs[u].status = UAVState.DESTROYED
 
         # 计算奖励值和终止符号
-        self.set_reward(last_state, action, target_idx_before)
+        self.set_reward(last_state, actions, target_idx_before)
 
         ret_reward = [[x] for x in self.reward]
         return self.get_state_of_all_uav(), ret_reward, self.is_terminal, {i: {'individual_reward': self.reward[i]} for
@@ -432,8 +432,6 @@ class MultiUavEnv:
 
     def append_data(self, action):
         which_idx = self._get_game_target_idx()
-        if isinstance(action, np.ndarray):
-            action = action.tolist()
         data_save = {"uva_state": [x.to_dict() for x in self.raw_uavs], "uva_actions": action,
                      "_episode_steps": self._episode_steps, "reward": self.reward,
                      "c_target_id": id(self.raw_uavs[which_idx]) if which_idx is not None else "None",
