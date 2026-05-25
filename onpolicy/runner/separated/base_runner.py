@@ -1,6 +1,6 @@
 
 import time
-import wandb
+import swanlab as wandb
 import os
 import numpy as np
 from itertools import chain
@@ -55,7 +55,7 @@ class Runner(object):
                 os.makedirs(self.gif_dir)
         else:
             if self.use_wandb:
-                self.save_dir = str(wandb.run.dir)
+                self.save_dir = str(wandb.get_run().public.run_dir)
             else:
                 self.run_dir = config["run_dir"]
                 self.log_dir = str(self.run_dir / 'logs')

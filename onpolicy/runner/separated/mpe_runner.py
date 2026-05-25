@@ -1,6 +1,6 @@
     
 import time
-import wandb
+import swanlab as wandb
 import os
 import numpy as np
 from itertools import chain

@@ -115,21 +115,25 @@ class MultiUavEnv:
         for agent_id in range(self.n_total_uavs):
             self.action_space.append(spaces.Discrete(9))
             obs_dim = self.get_observation_size_of_a_uav()
-            observation_space = spaces.Dict({
-                # 1) 线性数据：一维连续向量（Box）
-                "linear": spaces.Box(low=-np.inf, high=+np.inf, shape=(obs_dim,), dtype=np.float32),
+            if self.is_share:
+                observation_space = spaces.Dict({
+                    # 1) 线性数据：一维连续向量（Box）
+                    "linear": spaces.Box(low=-np.inf, high=+np.inf, shape=(obs_dim,), dtype=np.float32),
 
-                # 2) 图像数据：高/宽/通道（最常用格式 HWC）
-                # "image": spaces.Box(
-                #     low=0,  # 像素 0~255
-                #     high=255,
-                #     shape=(1, 32, 32),  # 高84 × 宽84 × 3通道(RGB)
-                #     dtype=np.uint8
-                # )
-            })
+                    # 2) 图像数据：高/宽/通道（最常用格式 HWC）
+                    # "image": spaces.Box(
+                    #     low=0,  # 像素 0~255
+                    #     high=255,
+                    #     shape=(1, 32, 32),  # 高84 × 宽84 × 3通道(RGB)
+                    #     dtype=np.uint8
+                    # )
+                })
+            else:
+                observation_space = spaces.Box(low=-np.inf, high=+np.inf, shape=(obs_dim,), dtype=np.float32)
             self.observation_space.append(observation_space)
-        self.share_observation_space = [
-            spaces.Dict({
+
+        if self.is_share:
+            cent_obs_define = spaces.Dict({
                 # 1) 线性数据：一维连续向量（Box）
                 "linear": spaces.Box(low=-np.inf, high=+np.inf, shape=(self.n_total_uavs * obs_dim,), dtype=np.float32),
 
@@ -141,15 +145,20 @@ class MultiUavEnv:
                 #     dtype=np.uint8
                 # )
             })
+        else:
+            cent_obs_define = spaces.Box(low=-np.inf, high=+np.inf, shape=(self.n_total_uavs * obs_dim,),
+                                         dtype=np.float32)
+        self.share_observation_space = [
+            cent_obs_define
             for _ in range(self.n_total_uavs)]
 
-    def __init__(self, rank, mode="train", cf=None, episode_limit=500, is_debug=False):
+    def __init__(self, rank, mode="train", cf=None, episode_limit=500, is_debug=False, is_share=True):
         self.rank = rank
         # train为训练模式，test为测试模式
         self.mode = mode
         self.is_debug = is_debug
         self.is_use_weapon = True
-
+        self.is_share = is_share
         self.right_vector = None
 
         # 初始化回合数
@@ -335,7 +344,7 @@ class MultiUavEnv:
         team += position
         team += velocity
         team += right_vector
-        team += [get_status_value(temp_uav.status)]
+        team += [int(uav_id == 0)]
 
         for i in range(self.n_total_uavs):
             if i == uav_id:
@@ -348,13 +357,16 @@ class MultiUavEnv:
             team += position
             team += velocity
             team += right_vector
-            team += [get_status_value(temp_uav.status)]
+            team += [int(i == 0)]
 
         weapon = self.weapon
         target = self.target
         team += weapon
         team += target
-        return team, [None]
+        if self.is_share:
+            return team, [None]
+        else:
+            return team
 
     def _get_game_target_idx(self):
         c_target = EnvironmentInterface.try_get_current_target()
@@ -420,8 +432,9 @@ class MultiUavEnv:
 
     def append_data(self, action):
         which_idx = self._get_game_target_idx()
-
-        data_save = {"uva_state": [x.to_dict() for x in self.raw_uavs], "uva_actions": action.tolist(),
+        if isinstance(action, np.ndarray):
+            action = action.tolist()
+        data_save = {"uva_state": [x.to_dict() for x in self.raw_uavs], "uva_actions": action,
                      "_episode_steps": self._episode_steps, "reward": self.reward,
                      "c_target_id": id(self.raw_uavs[which_idx]) if which_idx is not None else "None",
                      'r_msg': self.r_msg, 'degree': self.degree
@@ -451,6 +464,7 @@ class MultiUavEnv:
             self.r_msg = ['' for _ in range(self.n_total_uavs)]
             self.degree = [None for _ in range(self.n_total_uavs)]
             is_reach = [False for _ in range(self.n_total_uavs)]
+            is_finish = [False for _ in range(self.n_total_uavs)]
             target_idx = self._get_game_target_idx()
             for i in range(self.n_total_uavs):
                 deg = cal_threat_level(self.weapon, self.uav_velocity_value,
@@ -469,10 +483,15 @@ class MultiUavEnv:
                 #     assert False
 
                 c_dis = compute_distance(current_p[i].position, self.target)
-                if c_dis <= self.task_success_radius:
+                if c_dis <= self.task_success_radius and i == 0:
                     self.reward[i] += 10
-                    is_reach[i] = True
-                    self.r_msg[i] += f'{i}到达目的地-'
+                    is_finish[i] = True
+                    self.r_msg[i] += f'{i}到达目的地，'
+
+                if abs(c_dis - 1500) < self.uav_velocity_value + 1 and i == 1:
+                    self.reward[i] += 10
+                    is_finish[i] = True
+                    self.r_msg[i] += f'{i}到达1500附近，'
 
                 # x, y, z = current_p[i].position
 
@@ -504,7 +523,7 @@ class MultiUavEnv:
                 # self.reward[i] += 1.5
                 # self.r_msg[i] += '被山遮挡，'
 
-            if all(is_reach):
+            if all(is_finish):
                 self.append_data(action)
                 self.dump("到达目的地")
                 self.is_terminal = [True for _ in range(self.n_total_uavs)]

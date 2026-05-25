@@ -109,8 +109,7 @@ class R_MAPPO():
                 value_preds_batch, return_batch, masks_batch, active_masks_batch, old_action_log_probs_batch, \
                 adv_targ, available_actions_batch = sample
         else:
-            raise Exception("Not implements")
-            share_obs_batch, obs_batch, rnn_states_batch, rnn_states_critic_batch, actions_batch, \
+            share_obs_lin_batch, obs_lin_batch, rnn_states_batch, rnn_states_critic_batch, actions_batch, \
                 value_preds_batch, return_batch, masks_batch, active_masks_batch, old_action_log_probs_batch, \
                 adv_targ, available_actions_batch, _ = sample
 

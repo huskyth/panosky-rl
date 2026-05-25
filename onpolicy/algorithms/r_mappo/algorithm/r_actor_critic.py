@@ -38,7 +38,7 @@ class R_Actor(nn.Module):
             self.base_linear = base_linear(args, obs_shape['linear'])
         else:
             base = CNNBase if len(obs_shape) == 3 else MLPBase
-            self.base = base(args, obs_shape)
+            self.base_linear = base(args, obs_shape)
 
         if self._use_naive_recurrent_policy or self._use_recurrent_policy:
             self.rnn = RNNLayer(self.hidden_size, self.hidden_size, self._recurrent_N, self._use_orthogonal)
@@ -158,7 +158,7 @@ class R_Critic(nn.Module):
             self.base_linear = base_linear(args, cent_obs_shape['linear'])
         else:
             base = CNNBase if len(cent_obs_shape) == 3 else MLPBase
-            self.base = base(args, cent_obs_shape)
+            self.base_linear = base(args, cent_obs_shape)
 
         if self._use_naive_recurrent_policy or self._use_recurrent_policy:
             self.rnn = RNNLayer(self.hidden_size, self.hidden_size, self._recurrent_N, self._use_orthogonal)
