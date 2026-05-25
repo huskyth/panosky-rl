@@ -462,7 +462,7 @@ class MultiUavEnv:
             self.r_msg = ['' for _ in range(self.n_total_uavs)]
             self.degree = [None for _ in range(self.n_total_uavs)]
             is_reach = [False for _ in range(self.n_total_uavs)]
-            is_finish = [False for _ in range(self.n_total_uavs)]
+            is_finish = False
             target_idx = self._get_game_target_idx()
             for i in range(self.n_total_uavs):
                 deg = cal_threat_level(self.weapon, self.uav_velocity_value,
@@ -483,12 +483,11 @@ class MultiUavEnv:
                 c_dis = compute_distance(current_p[i].position, self.target)
                 if c_dis <= self.task_success_radius and i == 0:
                     self.reward[i] += 10
-                    is_finish[i] = True
+                    is_finish = True
                     self.r_msg[i] += f'{i}到达目的地，'
 
                 if abs(c_dis - 1500) < self.uav_velocity_value + 1 and i == 1:
-                    self.reward[i] += 10
-                    is_finish[i] = True
+                    self.reward[i] += 1
                     self.r_msg[i] += f'{i}到达1500附近，'
 
                 # x, y, z = current_p[i].position
@@ -521,7 +520,7 @@ class MultiUavEnv:
                 # self.reward[i] += 1.5
                 # self.r_msg[i] += '被山遮挡，'
 
-            if all(is_finish):
+            if is_finish:
                 self.append_data(action)
                 self.dump("到达目的地")
                 self.is_terminal = [True for _ in range(self.n_total_uavs)]

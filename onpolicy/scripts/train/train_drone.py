@@ -10,7 +10,7 @@ from pathlib import Path
 import torch
 from onpolicy.config import get_config
 from onpolicy.envs.drone.uav_env import uav_env, logger
-from onpolicy.envs.env_wrappers import SubprocVecEnv, DummyVecEnv
+from onpolicy.envs.env_wrappers_with_img import SubprocVecEnv, DummyVecEnv
 
 """Train script for MPEs."""
 
