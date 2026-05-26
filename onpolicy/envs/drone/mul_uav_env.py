@@ -496,7 +496,7 @@ class MultiUavEnv:
                     self.reward[i] += -1
                     self.r_msg[i] += f'不能跑1500-1800，'
 
-                if last_target is not None and target_idx is None:
+                if last_target is not None and target_idx is None and current_p[i].status == UAVState.ALIVE:
                     self.r_msg[i] += f"滑出去了，可能重新确定目标，{last_target}, {target_idx}"
                     g_st = _green_log_str(f"滑出去了，可能重新确定目标，{last_target}, {target_idx}")
                     logger.info(f"PID-{os.getpid()}, mode-{self.mode}, episode-{self.n_episode} {g_st}")
