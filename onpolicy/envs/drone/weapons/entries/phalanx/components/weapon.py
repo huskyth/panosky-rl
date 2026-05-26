@@ -5,6 +5,7 @@ from onpolicy.envs.drone.weapons.entries.config.global_config import *
 from onpolicy.envs.drone.weapons.entries.uav.uav_enum import *
 import os
 from onpolicy.utils.format_logger import AppLogger
+from onpolicy.utils.util import compute_distance
 
 logger = AppLogger().get_logger()
 
@@ -121,7 +122,7 @@ class Bullet(AbstractEntry):
         self.fired_bullet_list = fired_bullet_list
         self.all_time_to_fly = self._calculate_all_time_of_fly()
         self.target.set_attacked_state(AttackState.ATTACKING)
-        logger.info(f"初始化的时候飞机位置 {target.position}")
+        logger.info(f"初始化的时候飞机位置 {target.position}, 当前和武器距离{compute_distance(self.position, self.target.position)}")
 
     def _calculate_all_time_of_fly(self):
         distance = distance_of_2_point(self.target.position, self.position)
@@ -135,7 +136,8 @@ class Bullet(AbstractEntry):
             is_hit_and_kill = self.is_hit_kill_by_mc()
             logger.info(
                 "id为：" + self.get_id() + "的子弹" + "它的无人机为：" + self.target.get_id() + ", 参数为" + str(
-                    self.hit_kill_probability) + "，蒙特卡洛是否被 命中和毁伤 ：" + str(is_hit_and_kill))
+                    self.hit_kill_probability) + "，蒙特卡洛是否被 命中和毁伤 ：" + str(
+                    is_hit_and_kill) + f'当前和武器距离{compute_distance(self.position, self.target.position)}')
             # 命中
             if is_hit_and_kill:
                 # 被毁伤，移除自己
@@ -145,6 +147,7 @@ class Bullet(AbstractEntry):
                     f"当前无人机列表ID {[id(x) for x in uav_list]}",
                     is_in_file=False)
                 self.target.remove_self_from_list(uav_list)
+
                 logger.info(f"移除后无人机列表ID {[id(x) for x in uav_list]}， {uav_list}")
                 return Weapon.BulletState.KILLED_NO_USE
             else:

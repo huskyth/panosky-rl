@@ -211,7 +211,7 @@ class AdjustBoardAction(AbstractAction):
             can_use_because_no_mountain = GameManager.track_rader.is_target_can_use_because_no_mountain()
             if not can_use_because_no_mountain:
                 logger.info(f"会因为不能用而被移除")
-            if not is_in_track_range or not can_use_because_no_mountain:
+            if not is_in_track_range:
                 GameManager.track_rader.remove_target()
                 GameManager.weapon.reset_fire_instruction()
                 TrackRaderState.set_normal_state()
@@ -251,7 +251,7 @@ class CaptureAction(AbstractAction):
             can_use_because_no_mountain = GameManager.track_rader.is_target_can_use_because_no_mountain()
             if not can_use_because_no_mountain:
                 logger.info(f"会因为不能用而被移除")
-            if not is_in_track_range or not can_use_because_no_mountain:
+            if not is_in_track_range:
                 GameManager.track_rader.remove_target()
                 GameManager.track_rader.reset_capture_time()
                 GameManager.weapon.reset_fire_instruction()
@@ -290,7 +290,7 @@ class LoadBulletAction(AbstractAction):
         can_use = GameManager.track_rader.is_target_can_use_because_no_mountain()
         if not can_use:
             logger.info(f"会因为不能用而被移除")
-        if not is_target_in_track_range or not can_use:
+        if not is_target_in_track_range:
             LoadBulletAction.end_state = TrackStateEnum.NORMAL
             GameManager.track_rader.remove_target()
             GameManager.weapon.reset_fire_instruction()
@@ -324,6 +324,7 @@ class BulletAttackAction(AbstractAction):
         will_deleted_fired_bullet_list = []
         if GameManager.track_rader.try_get_current_target() is None:
             return
+
         for idx, a_bullet in enumerate(GameManager.weapon.fired_bullet_list):
             # 列表中的子弹代表发射出去的，默认都有跟踪目标
             bullet_state = a_bullet.step_attack_a_target_and_is_kill(
@@ -373,7 +374,7 @@ class FireAction(AbstractAction):
             can_use = GameManager.track_rader.is_target_can_use_because_no_mountain()
             if not can_use:
                 logger.info(f"会因为不能用而被移除")
-            if not is_target_in_fire_range or not can_use:
+            if not is_target_in_fire_range:
                 logger.info("因为超出开火距离或者有山而被设置为没有目标状态")
                 GameManager.track_rader.remove_target()
                 GameManager.weapon.reset_fire_instruction()

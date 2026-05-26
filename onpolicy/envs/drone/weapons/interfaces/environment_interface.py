@@ -31,3 +31,7 @@ class EnvironmentInterface:
     @staticmethod
     def get_uav_list():
         return Game.get_uav_list()
+
+    @staticmethod
+    def get_weapon_state():
+        return Game.get_weapon_state()

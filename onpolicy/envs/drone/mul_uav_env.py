@@ -7,6 +7,8 @@ import warnings
 import os
 import numpy as np
 from gym import spaces
+
+from onpolicy.envs.drone.weapons.entries.phalanx.components.track_rader.track_rader_enum import TrackStateEnum
 from onpolicy.utils.format_logger import AppLogger, _green_log_str
 from onpolicy.envs.drone.weapons.entries.uav.uav_enum import UAVState, AttackState
 from onpolicy.envs.drone.maps.map import Map
@@ -275,6 +277,7 @@ class MultiUavEnv:
         data_save = {"uva_state": [x.to_dict() for x in self.raw_uavs],
                      "uva_actions": [-1 for _ in range(self.n_total_uavs)],
                      "_episode_steps": self._episode_steps, "reward": self.reward,
+                     "right_vec": self.right_vector,
                      "c_target_id": id(self.raw_uavs[which_idx]) if which_idx is not None else "None"}
         self.episode_data.append(data_save)
 
@@ -344,20 +347,22 @@ class MultiUavEnv:
         team += position
         team += velocity
         team += right_vector
-        team += [int(uav_id == 0)]
+        team += [EnvironmentInterface.get_weapon_state()]
+        team += [compute_distance(self.weapon, self.raw_uavs[uav_id].position)]
+        team += [int(target_idx is None)]
 
-        for i in range(self.n_total_uavs):
-            if i == uav_id:
-                continue
-            # 本机位置和速度
-            temp_uav = self.raw_uavs[i]
-            position = temp_uav.position
-            velocity = temp_uav.velocity
-            right_vector = self.right_vector[i]
-            team += position
-            team += velocity
-            team += right_vector
-            team += [int(i == 0)]
+        # for i in range(self.n_total_uavs):
+        #     if i == uav_id:
+        #         continue
+        #     # 本机位置和速度
+        #     temp_uav = self.raw_uavs[i]
+        #     position = temp_uav.position
+        #     velocity = temp_uav.velocity
+        #     right_vector = self.right_vector[i]
+        #     team += position
+        #     team += velocity
+        #     team += right_vector
+        #     team += [EnvironmentInterface.get_weapon_state()]
 
         weapon = self.weapon
         target = self.target
@@ -371,7 +376,7 @@ class MultiUavEnv:
     def _get_game_target_idx(self):
         c_target = EnvironmentInterface.try_get_current_target()
         if c_target is None:
-            return -1
+            return None
         for i in range(self.n_total_uavs):
             if c_target is EnvironmentInterface.get_uav_list()[i]:
                 return i
@@ -414,6 +419,7 @@ class MultiUavEnv:
         target_idx_before = None
         # TODO://待检查，先注释，训练完成了再解开
         if self.is_use_weapon:
+            lat_stat = EnvironmentInterface.get_weapon_state()
             position = [self.raw_uavs[u].position for u in range(self.n_total_uavs)]
             velocity = [self.raw_uavs[u].velocity for u in range(self.n_total_uavs)]
             target_idx_before = self._get_game_target_idx()
@@ -424,7 +430,7 @@ class MultiUavEnv:
                     self.raw_uavs[u].status = UAVState.DESTROYED
 
         # 计算奖励值和终止符号
-        self.set_reward(last_state, actions, target_idx_before)
+        self.set_reward(last_state, actions, target_idx_before, lat_stat)
 
         ret_reward = [[x] for x in self.reward]
         return self.get_state_of_all_uav(), ret_reward, self.is_terminal, {i: {'individual_reward': self.reward[i]} for
@@ -433,6 +439,7 @@ class MultiUavEnv:
     def append_data(self, action):
         which_idx = self._get_game_target_idx()
         data_save = {"uva_state": [x.to_dict() for x in self.raw_uavs], "uva_actions": action,
+                     "right_vec": self.right_vector,
                      "_episode_steps": self._episode_steps, "reward": self.reward,
                      "c_target_id": id(self.raw_uavs[which_idx]) if which_idx is not None else "None",
                      'r_msg': self.r_msg, 'degree': self.degree
@@ -453,16 +460,16 @@ class MultiUavEnv:
                 or next_z < self.min_available_height or next_z > self.max_available_height):
             cur_uav.status = UAVState.COLLISION
 
-    def set_reward(self, last_p, action, last_target):
-        assert last_target is not None
+    def set_reward(self, last_p, action, last_target, lat_stat):
         current_p = self.raw_uavs
 
         if self.is_use_weapon:
-            self.reward = [-0.1 for _ in range(self.n_total_uavs)]
+            self.reward = [0.1 for _ in range(self.n_total_uavs)]
             self.r_msg = ['' for _ in range(self.n_total_uavs)]
             self.degree = [None for _ in range(self.n_total_uavs)]
             is_reach = [False for _ in range(self.n_total_uavs)]
             is_finish = False
+            is_col = False
             target_idx = self._get_game_target_idx()
             for i in range(self.n_total_uavs):
                 deg = cal_threat_level(self.weapon, self.uav_velocity_value,
@@ -474,21 +481,35 @@ class MultiUavEnv:
                 #     self.is_terminal[i] = True
                 #     self.r_msg[i] += f'{i}撞地了-'
 
-                # if current_p[i].status == UAVState.DESTROYED:
-                #     self.reward[i] -= 5
-                #     self.is_terminal[i] = True
-                #     self.r_msg[i] += f'{i}被摧毁了-'
-                #     assert False
+                if current_p[i].status == UAVState.DESTROYED:
+                    self.reward[i] -= 10
+                    is_col = True
+                    self.r_msg[i] += f'{i}被摧毁了-'
 
                 c_dis = compute_distance(current_p[i].position, self.target)
-                if c_dis <= self.task_success_radius and i == 0:
-                    self.reward[i] += 10
-                    is_finish = True
-                    self.r_msg[i] += f'{i}到达目的地，'
+                if c_dis > 1800:
+                    self.reward[i] -= 10
+                    is_col = True
+                    self.r_msg[i] += f'不能跑外边，'
 
-                if abs(c_dis - 1500) < self.uav_velocity_value + 1 and i == 1:
-                    self.reward[i] += 1
-                    self.r_msg[i] += f'{i}到达1500附近，'
+                if 1500 < c_dis <= 1800:
+                    self.reward[i] += -1
+                    self.r_msg[i] += f'不能跑1500-1800，'
+
+                if last_target is not None and target_idx is None:
+                    self.r_msg[i] += f"滑出去了，可能重新确定目标，{last_target}, {target_idx}"
+                    g_st = _green_log_str(f"滑出去了，可能重新确定目标，{last_target}, {target_idx}")
+                    logger.info(f"PID-{os.getpid()}, mode-{self.mode}, episode-{self.n_episode} {g_st}")
+                    self.reward[i] += 3
+
+                # if c_dis <= self.task_success_radius and i == 0:
+                #     # self.reward[i] += 10
+                #     is_finish = True
+                #     self.r_msg[i] += f'{i}到达目的地，'
+
+                # if abs(c_dis - 1500) < self.uav_velocity_value + 1 and i == 1:
+                #     self.reward[i] += 1
+                #     self.r_msg[i] += f'{i}到达1500附近，'
 
                 # x, y, z = current_p[i].position
 
@@ -520,11 +541,12 @@ class MultiUavEnv:
                 # self.reward[i] += 1.5
                 # self.r_msg[i] += '被山遮挡，'
 
-            if is_finish:
+            if is_col:
                 self.append_data(action)
-                self.dump("到达目的地")
+                msg = "击毁或者超出边界"
+                self.dump(msg)
                 self.is_terminal = [True for _ in range(self.n_total_uavs)]
-                green_str = _green_log_str(f"[terminated]：到达目的地")
+                green_str = _green_log_str(f"[terminated]：{msg}")
                 logger.info(f"PID-{os.getpid()}, mode-{self.mode}, episode-{self.n_episode} {green_str}")
                 self.n_episode = self.n_episode + 1
                 return
@@ -577,7 +599,7 @@ class MultiUavEnv:
         (N * 8 + 8 + 3 + 3)
         """
         if self.is_use_weapon:
-            return self.n_total_uavs * 10 + 6
+            return self.n_total_uavs * 12 + 6
         else:
             return 3 + 3 + 3 + 3 + 3
 

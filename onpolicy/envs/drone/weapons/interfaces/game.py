@@ -53,13 +53,18 @@ class Game:
                 action.execute()
             else:
                 action.execute()
-        logger.info(f"这里返回的UAV ID {[id(x) for x in GameManager.get_uav_list()]}")
+        logger.info(f"这里返回的UAV ID {[(id(x), x) for x in GameManager.get_uav_list()]}")
         return GameManager.get_uav_list()
 
     @staticmethod
     def try_get_current_target():
+
         return GameManager.track_rader.try_get_current_target()
 
     @staticmethod
     def get_uav_list():
         return GameManager.get_uav_list()
+
+    @staticmethod
+    def get_weapon_state():
+        return TrackRaderState.get_current_int_state()

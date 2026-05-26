@@ -25,6 +25,10 @@ class TrackRaderState:
         return STATE_TO_STRING[TrackRaderState.current_state]
 
     @staticmethod
+    def get_current_int_state():
+        return TrackRaderState.current_state.value
+
+    @staticmethod
     def is_adjust_board_state():
         return TrackRaderState.current_state == TrackStateEnum.ADJUST_BOARD
 
