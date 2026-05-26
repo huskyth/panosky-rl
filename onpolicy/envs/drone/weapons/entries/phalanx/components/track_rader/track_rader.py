@@ -109,7 +109,7 @@ class TrackRader(Rader):
     def current_target_exist(self):
         return self.current_target is not None
 
-    def remove_target(self):
+    def remove_target(self, weapon):
         '''
         雷达的目标移除
         :return:
@@ -119,6 +119,14 @@ class TrackRader(Rader):
             assert False
             return
         self.current_target.reset_attacked_state()
+        contain_list = []
+        n = len(weapon.fired_bullet_list)
+        for bullet in weapon.fired_bullet_list:
+            if bullet.target is not self.current_target:
+                contain_list.append(bullet)
+        weapon.fired_bullet_list = contain_list
+        logger.info(
+            f"没有目标了就移除子弹，子弹不会执行step_attack_a_target_and_is_kill方法，移除前有子弹 {n}, 移除后 {len(weapon.fired_bullet_list)}")
         self.current_target = None
 
     def _handle_equal_condition(self, first_select_target_tuple, threat_level_uav_list):

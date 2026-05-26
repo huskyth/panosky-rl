@@ -3,6 +3,7 @@ from onpolicy.envs.drone.weapons.factory.phalanx_factory import PhalanxFactory
 from onpolicy.envs.drone.weapons.factory.uav_factory import UAVFactory
 from onpolicy.envs.drone.weapons.entries.phalanx.components.track_rader.track_rader_state import *
 from onpolicy.envs.drone.weapons.entries.config.global_config import *
+from onpolicy.utils.format_logger import _green_log_str
 from onpolicy.utils.math_tool import distance_of_2_point, length_of_vector
 from onpolicy.utils.util import compute_distance
 
@@ -140,7 +141,8 @@ class TimeStepAction(AbstractAction):
     @staticmethod
     def execute():
         content = TrackRaderState.get_current_string_state()
-        logger.info(f"✅【当前时间】{GameConfig.CURRENT_GAME_TIME}【当前状态为】-{content}{'=' * 123}")
+        gre = _green_log_str(f"{'=' * 123}")
+        logger.info(f"✅【当前时间】{GameConfig.CURRENT_GAME_TIME}【当前状态为】-{content} {gre}")
         logger.info("当前时间{},随机数n为{}".format(GameConfig.CURRENT_GAME_TIME, GameConfig.RANDOM_N))
         GameConfig.CURRENT_GAME_TIME = round(UNIT_TIME + GameConfig.CURRENT_GAME_TIME, 1)
         for i in range(len(GameManager.uav_list)):
@@ -150,7 +152,8 @@ class TimeStepAction(AbstractAction):
                 temp = GameManager.uav_list[i].position
 
             temp_p = GameManager.track_rader.position
-            logger.info(f"当前无人机位置为{temp}, 距离为 {'None' if not temp else compute_distance(temp_p, temp)}", is_in_file=False)
+            logger.info(f"当前无人机位置为{temp}, 距离为 {'None' if not temp else compute_distance(temp_p, temp)}",
+                        is_in_file=False)
         if GameManager.track_rader.current_target is not None:
             logger.info("当前目标索引为{}".format(GameManager.get_uav_index()))
 
@@ -212,7 +215,7 @@ class AdjustBoardAction(AbstractAction):
             if not can_use_because_no_mountain:
                 logger.info(f"会因为不能用而被移除")
             if not is_in_track_range:
-                GameManager.track_rader.remove_target()
+                GameManager.track_rader.remove_target(GameManager.weapon)
                 GameManager.weapon.reset_fire_instruction()
                 TrackRaderState.set_normal_state()
                 GameManager.track_rader.adjust_end_set_value()
@@ -252,7 +255,7 @@ class CaptureAction(AbstractAction):
             if not can_use_because_no_mountain:
                 logger.info(f"会因为不能用而被移除")
             if not is_in_track_range:
-                GameManager.track_rader.remove_target()
+                GameManager.track_rader.remove_target(GameManager.weapon)
                 GameManager.track_rader.reset_capture_time()
                 GameManager.weapon.reset_fire_instruction()
                 TrackRaderState.set_normal_state()
@@ -292,7 +295,7 @@ class LoadBulletAction(AbstractAction):
             logger.info(f"会因为不能用而被移除")
         if not is_target_in_track_range:
             LoadBulletAction.end_state = TrackStateEnum.NORMAL
-            GameManager.track_rader.remove_target()
+            GameManager.track_rader.remove_target(GameManager.weapon)
             GameManager.weapon.reset_fire_instruction()
             LoadBulletAction.confirm_track_target_and_adjust_board()
             GameManager.track_rader.adjust_end_set_value()
@@ -322,15 +325,13 @@ class BulletAttackAction(AbstractAction):
     @staticmethod
     def execute():
         will_deleted_fired_bullet_list = []
-        if GameManager.track_rader.try_get_current_target() is None:
-            return
 
         for idx, a_bullet in enumerate(GameManager.weapon.fired_bullet_list):
             # 列表中的子弹代表发射出去的，默认都有跟踪目标
             bullet_state = a_bullet.step_attack_a_target_and_is_kill(
                 GameManager.uav_list, GameManager.get_uav_index)
             if bullet_state == GameManager.weapon.BulletState.KILLED_NO_USE:
-                GameManager.track_rader.remove_target()
+                GameManager.track_rader.remove_target(GameManager.weapon)
                 GameManager.weapon.reset_fire_instruction()
                 TrackRaderState.set_normal_state()
                 GameManager.weapon.clear_fired_bullet_list()
@@ -376,7 +377,7 @@ class FireAction(AbstractAction):
                 logger.info(f"会因为不能用而被移除")
             if not is_target_in_fire_range:
                 logger.info("因为超出开火距离或者有山而被设置为没有目标状态")
-                GameManager.track_rader.remove_target()
+                GameManager.track_rader.remove_target(GameManager.weapon)
                 GameManager.weapon.reset_fire_instruction()
                 TrackRaderState.set_normal_state()
             else:
