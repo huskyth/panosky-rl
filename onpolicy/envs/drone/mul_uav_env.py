@@ -339,7 +339,7 @@ class MultiUavEnv:
         team = []
 
         target_idx = self._get_game_target_idx()
-
+        target_idx = -1 if target_idx is None else target_idx
         temp_uav = self.raw_uavs[uav_id]
         position = temp_uav.position
         velocity = temp_uav.velocity
@@ -349,8 +349,7 @@ class MultiUavEnv:
         team += right_vector
         team += [EnvironmentInterface.get_weapon_state()]
         team += [compute_distance(self.weapon, self.raw_uavs[uav_id].position)]
-        team += [temp_uav.status.value]
-
+        team += [target_idx]
 
         for i in range(self.n_total_uavs):
             if i == uav_id:
@@ -365,7 +364,7 @@ class MultiUavEnv:
             team += right_vector
             team += [EnvironmentInterface.get_weapon_state()]
             team += [compute_distance(self.weapon, self.raw_uavs[i].position)]
-            team += [temp_uav.status.value]
+            team += [get_status_value(temp_uav.status)]
 
         weapon = self.weapon
         target = self.target
@@ -467,7 +466,7 @@ class MultiUavEnv:
         current_p = self.raw_uavs
 
         if self.is_use_weapon:
-            self.reward = [-0.1 for _ in range(self.n_total_uavs)]
+            self.reward = [0.1 for _ in range(self.n_total_uavs)]
             self.r_msg = ['' for _ in range(self.n_total_uavs)]
             self.degree = [None for _ in range(self.n_total_uavs)]
             is_reach = [False for _ in range(self.n_total_uavs)]
@@ -485,15 +484,33 @@ class MultiUavEnv:
                 #     self.r_msg[i] += f'{i}撞地了-'
 
                 if current_p[i].status == UAVState.DESTROYED:
-                    self.reward[i] -= 10
+                    self.reward[i] -= 100
                     self.is_terminal[i] = True
                     self.r_msg[i] += f'{i}被摧毁了-'
+                    continue
 
-                c_dis = compute_distance(current_p[i].position, self.target)
-                if c_dis <= self.task_success_radius:
-                    self.reward[i] += 10
-                    is_finish = True
-                    self.r_msg[i] += f'{i}到达目的地，'
+                if last_target is None:
+
+                    if target_idx is None:
+                        self.reward[i] += -1
+                        self.r_msg[i] += '要去勾引，'
+                    else:
+                        self.reward[i] += 1
+                        self.r_msg[i] += '勾引到了，'
+                else:
+                    if target_idx is None:
+                        if current_p[i].status == UAVState.ALIVE:
+                            self.reward[i] += 3
+                            self.r_msg[i] += '勾引到了并且解除了，'
+                    else:
+                        self.reward[i] += -1
+                        self.r_msg[i] += '勾引中需要尽快解除，'
+
+                # c_dis = compute_distance(current_p[i].position, self.target)
+                # if c_dis <= self.task_success_radius:
+                #     self.reward[i] += 10
+                #     is_finish = True
+                #     self.r_msg[i] += f'{i}到达目的地，'
 
                 # if abs(c_dis - 1500) < self.uav_velocity_value + 1 and i == 1:
                 #     self.reward[i] += 1
@@ -529,15 +546,15 @@ class MultiUavEnv:
                 # self.reward[i] += 1.5
                 # self.r_msg[i] += '被山遮挡，'
 
-            if is_finish:
-                self.append_data(action)
-                msg = "到达目的地"
-                self.dump(msg)
-                self.is_terminal = [True for _ in range(self.n_total_uavs)]
-                green_str = _green_log_str(f"[terminated]：{msg}")
-                logger.info(f"PID-{os.getpid()}, mode-{self.mode}, episode-{self.n_episode} {green_str}")
-                self.n_episode = self.n_episode + 1
-                return
+            # if is_finish:
+            #     self.append_data(action)
+            #     msg = "到达目的地"
+            #     self.dump(msg)
+            #     self.is_terminal = [True for _ in range(self.n_total_uavs)]
+            #     green_str = _green_log_str(f"[terminated]：{msg}")
+            #     logger.info(f"PID-{os.getpid()}, mode-{self.mode}, episode-{self.n_episode} {green_str}")
+            #     self.n_episode = self.n_episode + 1
+            #     return
 
             if all(self.is_terminal):
                 self.append_data(action)
