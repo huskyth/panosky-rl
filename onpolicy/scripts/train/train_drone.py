@@ -10,7 +10,6 @@ from pathlib import Path
 import torch
 from onpolicy.config import get_config
 from onpolicy.envs.drone.uav_env import uav_env, logger
-from onpolicy.envs.env_wrappers_with_img import SubprocVecEnv, DummyVecEnv
 
 """Train script for MPEs."""
 
@@ -28,6 +27,11 @@ def make_train_env(all_args):
             return env
 
         return init_env
+
+    if all_args.share_policy:
+        from onpolicy.envs.env_wrappers_with_img import SubprocVecEnv, DummyVecEnv
+    else:
+        from onpolicy.envs.env_wrappers import SubprocVecEnv, DummyVecEnv
 
     if all_args.n_rollout_threads == 1:
         return DummyVecEnv([get_env_fn(0)])
@@ -49,6 +53,10 @@ def make_eval_env(all_args):
 
         return init_env
 
+    if all_args.share_policy:
+        from onpolicy.envs.env_wrappers_with_img import SubprocVecEnv, DummyVecEnv
+    else:
+        from onpolicy.envs.env_wrappers import SubprocVecEnv, DummyVecEnv
     if all_args.n_eval_rollout_threads == 1:
         return DummyVecEnv([get_env_fn(0)])
     else:
@@ -149,7 +157,6 @@ def main(args):
     envs = make_train_env(all_args)
     eval_envs = make_eval_env(all_args) if all_args.use_eval else None
     num_agents = all_args.num_agents
-
     config = {
         "all_args": all_args,
         "envs": envs,
@@ -165,6 +172,7 @@ def main(args):
     else:
         from onpolicy.runner.separated.mpe_runner import MPERunner as Runner
 
+    config['is_eval'] = False
     runner = Runner(config)
     runner.run()
 

@@ -335,36 +335,40 @@ class MultiUavEnv:
 
         # position = self.raw_uavs[uav_id].position
         # map_obs = self.map.generate_img(position[0], position[1])[0][0]
-
         team = []
-
         target_idx = self._get_game_target_idx()
         target_idx = -1 if target_idx is None else target_idx
-        temp_uav = self.raw_uavs[uav_id]
-        position = temp_uav.position
-        velocity = temp_uav.velocity
-        right_vector = self.right_vector[uav_id]
-        team += position
-        team += velocity
-        team += right_vector
-        team += [EnvironmentInterface.get_weapon_state()]
-        team += [compute_distance(self.weapon, self.raw_uavs[uav_id].position)]
-        team += [target_idx]
+
+        def set_uav_state(idx):
+            nonlocal team
+            tp_uav = self.raw_uavs[idx]
+            position = tp_uav.position
+            velocity = tp_uav.velocity
+            right_vector = self.right_vector[idx]
+            w_state = EnvironmentInterface.get_weapon_state()
+            dis = compute_distance(self.weapon, position)
+            c_tar = target_idx
+            player = int(idx == 0)
+            status = get_status_value(tp_uav.status)
+            if tp_uav.status != UAVState.ALIVE:
+                position, velocity, right_vector = [0, 0, 0], [0, 0, 0], [0, 0, 0]
+                w_state, dis, c_tar, player, status = 0, 0, 0, 0, 0
+            team += position
+            team += velocity
+            team += right_vector
+            team += [w_state]
+            team += [dis]
+            team += [c_tar]
+            team += [player]
+            team += [status]
+
+        set_uav_state(uav_id)
 
         for i in range(self.n_total_uavs):
             if i == uav_id:
                 continue
             # 本机位置和速度
-            temp_uav = self.raw_uavs[i]
-            position = temp_uav.position
-            velocity = temp_uav.velocity
-            right_vector = self.right_vector[i]
-            team += position
-            team += velocity
-            team += right_vector
-            team += [EnvironmentInterface.get_weapon_state()]
-            team += [compute_distance(self.weapon, self.raw_uavs[i].position)]
-            team += [get_status_value(temp_uav.status)]
+            set_uav_state(i)
 
         weapon = self.weapon
         target = self.target
@@ -466,45 +470,61 @@ class MultiUavEnv:
         current_p = self.raw_uavs
 
         if self.is_use_weapon:
-            self.reward = [0.1 for _ in range(self.n_total_uavs)]
+            self.reward = [-0.1 for _ in range(self.n_total_uavs)]
             self.r_msg = ['' for _ in range(self.n_total_uavs)]
             self.degree = [None for _ in range(self.n_total_uavs)]
-            is_reach = [False for _ in range(self.n_total_uavs)]
+            is_reach = False
             is_finish = False
             is_col = False
+            dis = [None for _ in range(self.n_total_uavs)]
             target_idx = self._get_game_target_idx()
-            for i in range(self.n_total_uavs):
+            for idx in range(self.n_total_uavs):
                 deg = cal_threat_level(self.weapon, self.uav_velocity_value,
-                                       current_p[i].velocity, current_p[i].position)
-                self.degree[i] = deg
+                                       current_p[idx].velocity, current_p[idx].position)
+                self.degree[idx] = deg
 
-                # if current_p[i].status == UAVState.COLLISION:
-                #     self.reward[i] -= 6
-                #     self.is_terminal[i] = True
-                #     self.r_msg[i] += f'{i}撞地了-'
+                dis[idx] = compute_distance(current_p[idx].position, self.target)
+                if dis[idx] <= self.task_success_radius and idx == 1:
+                    self.reward[idx] += 200
+                    is_reach = True
+                    self.r_msg[idx] = f'{idx}到了，'
 
-                if current_p[i].status == UAVState.DESTROYED:
-                    self.reward[i] -= 100
-                    self.is_terminal[i] = True
-                    self.r_msg[i] += f'{i}被摧毁了-'
-                    continue
+                if current_p[idx].status == UAVState.DESTROYED:
+                    self.reward[idx] -= 100
+                    self.is_terminal[idx] = True
+                    self.r_msg[idx] += f'{idx}被摧毁了，'
 
-                if last_target is None:
-
-                    if target_idx is None:
-                        self.reward[i] += -1
-                        self.r_msg[i] += '要去勾引，'
-                    else:
-                        self.reward[i] += 1
-                        self.r_msg[i] += '勾引到了，'
+            # if current_p[i].status == UAVState.COLLISION:
+            #     self.reward[i] -= 6
+            #     self.is_terminal[i] = True
+            #     self.r_msg[i] += f'{i}撞地了-'
+            # 0诱饵机 1突防机
+            if last_target is None:
+                if target_idx is None:
+                    self.reward[0] += -1
+                    self.r_msg[0] += '要去勾引，'
+                elif target_idx == 0:
+                    self.reward[0] += 1
+                    self.r_msg[0] += '勾引到了，'
                 else:
-                    if target_idx is None:
-                        if current_p[i].status == UAVState.ALIVE:
-                            self.reward[i] += 3
-                            self.r_msg[i] += '勾引到了并且解除了，'
-                    else:
-                        self.reward[i] += -1
-                        self.r_msg[i] += '勾引中需要尽快解除，'
+                    self.reward[0] -= 20
+                    self.r_msg[0] += '1被瞄了，'
+            elif last_target == 0:
+                if target_idx is None:
+                    if current_p[0].status == UAVState.ALIVE:
+                        self.reward[0] += 3
+                        self.r_msg[0] += '0勾引到了并且解除了，'
+                else:
+                    self.reward[0] += -1
+                    self.r_msg[0] += '0被瞄中需要尽快解除，'
+            else:
+                if target_idx is None:
+                    if current_p[1].status == UAVState.ALIVE:
+                        self.reward[1] += 4
+                        self.r_msg[1] += '1勾引到了并且解除了，'
+                else:
+                    self.reward[1] += -10
+                    self.r_msg[1] += '1被瞄中需要尽快解除，'
 
                 # c_dis = compute_distance(current_p[i].position, self.target)
                 # if c_dis <= self.task_success_radius:
@@ -556,9 +576,19 @@ class MultiUavEnv:
             #     self.n_episode = self.n_episode + 1
             #     return
 
+            if is_reach:
+                self.append_data(action)
+                self.is_terminal = [True for _ in range(self.n_total_uavs)]
+                msg = "任务完成！"
+                self.dump(msg)
+                green_str = _green_log_str(msg)
+                logger.info(f"PID-{os.getpid()}, mode-{self.mode}, episode-{self.n_episode} {green_str}")
+                self.n_episode = self.n_episode + 1
+                return
+
             if all(self.is_terminal):
                 self.append_data(action)
-                msg = "击毁"
+                msg = "都被击毁！"
                 self.dump(msg)
                 green_str = msg
                 logger.info(f"PID-{os.getpid()}, mode-{self.mode}, episode-{self.n_episode} {green_str}")
@@ -576,6 +606,7 @@ class MultiUavEnv:
                 self.append_data(action)
                 self.dump("超出最大限制")
                 return
+
             self.append_data(action)
 
     def compute_init_velocity(self):
@@ -613,7 +644,7 @@ class MultiUavEnv:
         (N * 8 + 8 + 3 + 3)
         """
         if self.is_use_weapon:
-            return self.n_total_uavs * 12 + 6
+            return self.n_total_uavs * 14 + 6
         else:
             return 3 + 3 + 3 + 3 + 3
 

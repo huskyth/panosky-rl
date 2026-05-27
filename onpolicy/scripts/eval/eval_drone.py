@@ -10,7 +10,6 @@ from pathlib import Path
 import torch
 from onpolicy.config import get_config
 from onpolicy.envs.drone.uav_env import uav_env, logger
-from onpolicy.envs.env_wrappers_with_img import SubprocVecEnv, DummyVecEnv
 
 """Train script for MPEs."""
 
@@ -29,6 +28,10 @@ def make_eval_env(all_args):
 
         return init_env
 
+    if all_args.share_policy:
+        from onpolicy.envs.env_wrappers_with_img import SubprocVecEnv, DummyVecEnv
+    else:
+        from onpolicy.envs.env_wrappers import SubprocVecEnv, DummyVecEnv
     if all_args.n_eval_rollout_threads == 1:
         return DummyVecEnv([get_env_fn(0)])
     else:
@@ -129,7 +132,7 @@ def main(args):
     eval_envs = make_eval_env(all_args)
     num_agents = all_args.num_agents
     all_args.n_rollout_threads = 1
-    all_args.model_dir = r'C:\Users\qq162\Desktop\PanoSky-RL\onpolicy\scripts\train\swanlog\run-20260527_122714-b2d7mimpc1l1luwye4hih'
+    all_args.model_dir = r'C:\Users\qq162\Desktop\PanoSky-RL\onpolicy\scripts\train\swanlog\run-20260527_204014-2i35nkwq3rdjueijj59b9'
     config = {
         "all_args": all_args,
         "eval_envs": eval_envs,
