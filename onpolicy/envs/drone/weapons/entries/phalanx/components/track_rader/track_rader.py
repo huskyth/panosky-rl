@@ -129,26 +129,6 @@ class TrackRader(Rader):
             f"没有目标了就移除子弹，子弹不会执行step_attack_a_target_and_is_kill方法，移除前有子弹 {n}, 移除后 {len(weapon.fired_bullet_list)}")
         self.current_target = None
 
-    def _handle_equal_condition(self, first_select_target_tuple, threat_level_uav_list):
-        '''
-        :param first_select_target_tuple: （ entry[0]: 威胁程度，entry[1]: 对应无人机）
-        :param threat_level_uav_list:
-        :return: 返回无人机实例
-        '''
-        threashold = 0.0
-        close_list = [first_select_target_tuple[1]]
-        for entry in threat_level_uav_list:
-            if first_select_target_tuple[1] is entry[1]: continue
-            if abs(first_select_target_tuple[0] - entry[0]) <= threashold:
-                close_list.append(entry[1])
-        if len(close_list) == 1: return close_list[0]
-        return_uav = first_select_target_tuple[1]
-        if GameConfig.threat_level_priority == ThreatLevelPriority.DISTANCE:
-            return_uav = sorted(close_list, key=lambda item: distance_of_2_point(self.position, item.get_position()))[0]
-        elif GameConfig.threat_level_priority == ThreatLevelPriority.VELOCITY:
-            return_uav = sorted(close_list, key=lambda item: item.get_velocity_size())[-1]
-        return return_uav
-
     def confirm_track_target(self, search_rader, uav_list, get_uav_index_fun):
         '''
         :param search_rader:
@@ -181,8 +161,6 @@ class TrackRader(Rader):
             logger.info("找到了最大威胁程度大于阈值 " + str(
 
                 GameConfig.THREAT_LEVEL_THRESHOLD) + "的无人机：" + self.current_target.print_self())
-            self.current_target = self._handle_equal_condition((max_threat_level, self.current_target),
-                                                               threat_level_uav_list)
             assert self.current_target is not None, "_handle_equal_condition function exception"
         else:
             logger.info("没有找到，因为最大威胁程度小于阈值 " + str(GameConfig.THREAT_LEVEL_THRESHOLD))
