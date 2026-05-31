@@ -511,9 +511,11 @@ class MultiUavEnv:
                     self.r_msg[0] += '1被瞄了，'
             elif last_target == 0:
                 if target_idx is None:
-                    if current_p[0].status == UAVState.ALIVE:
+                    if current_p[0].status == UAVState.ALIVE and lat_stat == TrackStateEnum.FIRE.value:
                         self.reward[0] += 3
                         self.r_msg[0] += '0勾引到了并且解除了，'
+                        gre = _green_log_str('0勾引到了并且解除了')
+                        logger.info(f"PID-{os.getpid()}, mode-{self.mode}, episode-{self.n_episode} {gre}")
                 else:
                     self.reward[0] += -1
                     self.r_msg[0] += '0被瞄中需要尽快解除，'
